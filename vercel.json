@@ -1,3 +1,9 @@
 {
-  "crons": []
+  "crons": [],
+  "functions": {
+    "src/app/api/bodys-message/upload/route.ts": { "maxDuration": 60 },
+    "src/app/api/run-cycle/route.ts":             { "maxDuration": 60 },
+    "src/app/api/cron/daily-cycle/route.ts":      { "maxDuration": 60 }
+  }
 }
+
