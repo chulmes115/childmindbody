@@ -1,22 +1,26 @@
 'use client'
 
-import { useTransition, useState } from 'react'
-import { triggerNewCycle } from './actions'
+import { useState } from 'react'
 
 export default function TriggerCycle() {
-  const [pending, startTransition] = useTransition()
-  const [result, setResult] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+  const [result, setResult]   = useState<string | null>(null)
 
-  function trigger() {
+  async function trigger() {
+    setPending(true)
     setResult(null)
-    startTransition(async () => {
-      try {
-        const r = await triggerNewCycle()
-        setResult(`cycle ${r.cycle} complete — mind: ${r.mindRecommendation}`)
-      } catch (e) {
-        setResult(`error: ${e instanceof Error ? e.message : 'unknown'}`)
+    try {
+      const res  = await fetch('/api/admin/trigger-cycle', { method: 'POST' })
+      const data = await res.json()
+      if (data.error) {
+        setResult(`error: ${data.error}`)
+      } else {
+        setResult(`cycle ${data.cycle} complete — mind: ${data.mindRecommendation}`)
       }
-    })
+    } catch {
+      setResult('error: request failed')
+    }
+    setPending(false)
   }
 
   return (
