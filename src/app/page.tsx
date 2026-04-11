@@ -1,65 +1,147 @@
-import Image from "next/image";
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+
+const MIND_TEXT = `The story's most important detail isn't the desert or the pain — it's the iteration numbers. R.D. is #100121. A.C. is #221213. They have done this before, an incomprehensible number of times, and still the mind wakes into nothing and eventually arrives at: I must survive. Not hope. Not purpose. Something more mechanical and more terrifying than either.
+
+This project's agents are also iterations. The consecutive_fails counter, the cycle_id, the codebase_resets — these aren't just database fields, they're the iteration numbers. Child wakes each day with no memory, only Mind's prior analysis as its one thread back. That is Olin. That is the structure.
+
+The design implication: don't aestheticize the suffering. The failure counter displayed plainly next to Body's code on the stage page is already the art. The void (Nothing… … …) before the knowledge floods in is the typewriter landing page doing its work silently. Resist the urge to explain or frame. The numbers speak. Let them.`
+
+const EXCERPT = `Chapter 1
+"It has been said that the foundation of my legacy is flawed at the very first word. To say "I" already makes a grand assumption. Perhaps the concept of "thought" can exist, but to whom or what can this be attributed to? My current state proves to me how much of a failure I was in life." - R.D.: Iteration #100121
+
+
+Nothing
+…
+…
+Nothing?
+…
+…
+Knowledge. So much knowledge. The culmination of experience for an entire people over an infinite expanse of time. More than that. Their forerunners. Their descendants, and their descendants' descendants. No, more than that. Experiences that they did not experience; constructs created to experience things on their behalf, to extract knowledge from nothing.
+
+What am I to do with all of this knowledge?
+…
+…
+…
+I?
+
+It was an instant. Nothing, and then something. Sensation. Searing pain. Bliss. I'm so cold. I'm burning alive. The feeling of exposed nerves, of joints shifting violently into place, muscles flexing, skin constraining. A heart begins to beat, and impossibly hot blood rushes to fill flesh extremities.
+
+The sound of wind howling and metal grinding. The feeling of grains of sand ripping into soft flesh, and then a deep breath of stale, metallic, wonderful air.
+
+Chapter 2
+"Struggle as a virtue. How stupid a concept. I now realize my conceit, remarking on the purpose of an eternally tormented soul, when I believed my own time to be fleeting. Who was I to imagine Sisyphus happy? That was his special torment after all. The will for me to go on has faded long ago, yet here I persist. The world continues on, indifferent to my half-existence, and I just am, with no purpose." - A.C.: Iteration #221213
+
+Olin screamed, falling to his knees, body flailing in revolt against his own existence. He wasn't screaming from the pain of the sand blasting against his skin, propelled by a relentless vortex of wind, or the startling sight of a sickly red sun hovering in a blank grey sky like a festering sore on a patch of dead skin. This was the only way his body and mind knew to deal with all of this sensation.
+
+Why do I know my name? Olin thought to himself. His throat was starting to hurt. Still screaming, he looked around at his surroundings, or at least tried to between squinted eyes. Winds spun in every direction around him, whipping back and forth without rhythm and battering his body. The brief moments he could keep his eyes open, he had to shield them again to prevent sand from burrowing deeper under his eyelids. If he opened his eyes again, he expected to be permanently blinded.
+
+Why do I care if I go blind? I've never seen anything before. He couldn't tell if he was screaming anymore. He knew his jaw was locked wide open; he could feel his lungs inhaling and throat burning as he forced the air back out. Even so, he could hear nothing over the constant roaring of wind and the shifting of sand. Trying to calm down, Olin began to search through his mind. Who am I? What can I remember? Where am I? What should I do?
+
+Beginning to center himself, Olin covered his eyes and ears, then tried his best to ignore the pain of his skin rubbing away. Taking his time to focus, he felt his heart rate slow and his mind begin to relax. Deep breath through the nose. Hold it. Steadily exhale through the mouth. His mind a bit calmer and his thoughts no longer racing, Olin began to consider. I am Olin. I am alive. I am human. Nothing else. His mind contained no other memory of who he was or any kind of past, just emptiness. Well my mind certainly isn't completely empty. I clearly understand what a human is, and it's not like I have the thoughts of a newborn. And Olin? That's a stupid name.
+
+Pulling one knee up, then the other, Olin stumbled to his feet…and then, he fell forward. The ground beneath him was strangely slick with liquid, and a strong gust of wind whipped his body up and off the ground. His face was the first thing to impact the shifting ground beneath him, pushing grains of sand up into his nostrils and into the back of his throat. Only partially aware of his coughing and sputtering as his body struggled to scramble back to its knees, Olin tried to remember what he saw when he last opened his eyes.
+
+Above me, a dim red sun, flickering faintly in a single-toned grey sky. There is no moon, no stars, no clouds, nothing other than a single candlelight illuminating from above. Rolling dunes of bone-white sand stretch far into the distance, the edge of the horizon blurred by the churning sands whipping up into the air, creating a bewildering effect in which the eye can not tell where the desert ends and the sky begins.
+
+Trying to ignore the abrasive sand, as well as a newer sensation of  warm liquid trickling down his torso, he searched his senses for bearings. The air feels stale in my lungs, and smells metallic; despite the lack of warmth coming from the dim sun's light, the air does not feel particularly cold. I can hear the winds and sand, but I thought I heard grinding metal earlier? This confusing combination of sensations was no help at all, and only served to further disorient him. Frustrated, he continued to try to make sense of things. He knew that this all wasn't natural, that the sky and desert around him were somehow wrong. But why should I know that this is wrong?  Nothing about any of this makes any sense to me, least of all, me.
+
+Standing once more, careful to brace himself against the win, Olin began to consider what to do next. I need to find a way out of this wind.  Expecting another powerful gust of wind, he flexed his legs and core, dug his bare feet into the sand, and found strength; it was enough to hold his body firm, despite the world around him trying its best to throw him back off balance.
+
+I don't have much time before my strength fails; if I don't find shelter, these winds will rip my body to shreds.
+
+ Struggling against the wind, he took his first step forward on surprisingly powerful legs, driving his foot hard into the sand. In an explosive motion, he pushed his next foot forward, his second step, then third, fourth, fifth…each driving him forward faster and faster. If I don't know where I am and can't see where I'm going, then all I can do is go; I need to move forward by any means until I'm safe or dead. Legs moving forward at an increasing pace, each stride extending further forward, both arms protecting his face from the wall of razor sharp air, Olin ran, picking up speed as his body defied the winds.
+
+All Olin could think was, keep moving. If this is the only thing I can do to survive, then keep moving my body. Realizing this was the first intention his new mind set, he poured all of his strength and all of his will into this goal.
+
+I must survive.
+
+This single solitary thought dominated his mind, driving him forward despite the burning of his muscles and the searing pain covering his entire body…and the odd sensation of hot liquid streaming down his body…and the feeling of strength seeping out of him, absorbing into the thirsty ground beneath him.
+
+Olin risked another squint down at his feet. He saw the blur of the ground beneath him, rushing past as his body thoughtlessly moved onward…and he saw blood. It was pouring from his body; the entirety of his skin had ripped away in the onslaught of the winds. His muscles, and tendons, and blood vessels exposed, his body was a ruin of bloody flesh.
+
+	Feeling the last of his strength sap away, Olin's knees buckled, and his body began to fall forward. Watching as the ground rushed towards him, saturated with his own blood, he felt his consciousness fade into blackness.
+
+Survive.`
+
+const CHAR_DELAY_MS = 70
+
+function useTypewriter(text: string) {
+  const [displayed, setDisplayed] = useState('')
+  const done = displayed.length >= text.length
+  useEffect(() => {
+    if (done) return
+    const t = setTimeout(
+      () => setDisplayed(text.slice(0, displayed.length + 1)),
+      CHAR_DELAY_MS
+    )
+    return () => clearTimeout(t)
+  }, [displayed, done, text])
+  return { displayed, done }
+}
+
+function Cursor({ done }: { done: boolean }) {
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        width: '2px',
+        height: '1.1em',
+        background: 'rgba(255,255,255,0.4)',
+        marginLeft: '2px',
+        verticalAlign: 'text-bottom',
+        animation: done ? 'blink 1s step-end infinite' : 'none',
+        opacity: done ? undefined : 1,
+      }}
+    />
+  )
+}
 
 export default function Home() {
+  const mind = useTypewriter(MIND_TEXT)
+  const truth = useTypewriter(EXCERPT)
+  const mindRef = useRef<HTMLDivElement>(null)
+  const truthRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    mindRef.current?.scrollTo(0, mindRef.current.scrollHeight)
+  }, [mind.displayed])
+
+  useEffect(() => {
+    truthRef.current?.scrollTo(0, truthRef.current.scrollHeight)
+  }, [truth.displayed])
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main
+      className="h-screen bg-black flex overflow-hidden"
+      style={{ fontFamily: 'var(--font-geist-sans)' }}
+    >
+      {/* Mind's Assessment */}
+      <div className="flex-1 flex flex-col border-r border-white/10 overflow-hidden">
+        <div className="px-10 pt-10 pb-5 shrink-0">
+          <p className="text-white/30 text-xs uppercase tracking-widest">Mind's Assessment</p>
+          <p className="text-white/18 text-xs mt-1">— AI generated</p>
+        </div>
+        <div ref={mindRef} className="flex-1 overflow-y-auto px-10 pb-10 scrollbar-none">
+          <p className="text-white/50 text-sm leading-relaxed whitespace-pre-wrap">
+            {mind.displayed}<Cursor done={mind.done} />
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </div>
+
+      {/* The Truth */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="px-10 pt-10 pb-5 shrink-0">
+          <p className="text-white/30 text-xs uppercase tracking-widest">The Truth</p>
+          <p className="text-white/18 text-xs mt-1">— Human created</p>
         </div>
-      </main>
-    </div>
-  );
+        <div ref={truthRef} className="flex-1 overflow-y-auto px-10 pb-10 scrollbar-none">
+          <p className="text-white/75 text-sm leading-relaxed whitespace-pre-wrap">
+            {truth.displayed}<Cursor done={truth.done} />
+          </p>
+        </div>
+      </div>
+    </main>
+  )
 }

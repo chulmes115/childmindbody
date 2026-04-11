@@ -20,6 +20,7 @@ export type CycleRecord = {
   mind_analysis?: string
   mind_rec?: 'pass' | 'fail'
   chris_decision?: 'pass' | 'fail'
+  olin_note?: string
   consecutive_failures?: number
   code_fail_count?: number
   reset_count?: number

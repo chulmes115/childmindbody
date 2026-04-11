@@ -47,6 +47,7 @@ export async function runCycle(): Promise<CycleResult> {
     })()
 
   const priorAnalysis = priorRecord?.mind_analysis ?? ''
+  const olinNote = priorRecord?.olin_note
 
   // ── Step 2: Run Child ───────────────────────────────────────────────────────
   const childResult = await runChild({
@@ -56,6 +57,7 @@ export async function runCycle(): Promise<CycleResult> {
     codebaseResets: (codebaseResets as number) ?? 0,
     priorAnalysis,
     bodyCurrentCode: bodyCode ?? '',
+    olinNote,
   })
 
   await saveCycleRecord({

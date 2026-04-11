@@ -20,6 +20,7 @@ export type ChildContext = {
   codebaseResets: number
   priorAnalysis: string
   bodyCurrentCode: string
+  olinNote?: string
 }
 
 // ─── Child ────────────────────────────────────────────────────────────────────
@@ -35,6 +36,9 @@ Codebase resets: ${ctx.codebaseResets}
 
 MIND'S ANALYSIS — your only link to yesterday:
 ${ctx.priorAnalysis || '[No prior analysis — this is the first cycle.]'}
+
+OLIN'S NOTE — his reason for the previous decision:
+${ctx.olinNote || '[No note left.]'}
 
 BODY'S CURRENT CODE:
 ${ctx.bodyCurrentCode || '[Nothing is displayed yet.]'}`

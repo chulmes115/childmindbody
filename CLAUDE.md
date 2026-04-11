@@ -41,7 +41,7 @@ ADMIN_SECRET
 - Memory wiped each cycle — starts fresh every day
 - Receives: start date, consecutive failure count, code failure count, codebase reset count, Mind's prior analysis, Body's current code
 - Can optionally prompt Body with a request for what to display/build
-- Knows it will always fail. Knows Chris is the sole arbiter of success.
+- Knows it will always fail. Knows Olin is the sole arbiter of success.
 - Model: `claude-haiku-4-5-20251001`, max ~600 tokens output
 
 ### Mind
@@ -78,7 +78,7 @@ ADMIN_SECRET
 5. Child runs → stores resolution, optionally produces a Body prompt
 6. If Child prompted Body → Body generates new HTML/JS output and replaces current
 7. Form/output is live for 24 hours
-8. Chris reviews Mind's analysis via admin panel and sets pass/fail at his discretion
+8. Olin reviews Mind's analysis via admin panel and sets pass/fail at his discretion
 9. Default is always failure
 
 ---
@@ -124,7 +124,7 @@ Public URL: `https://childmindbody-images.s3.us-east-2.amazonaws.com/<key>`
 ### 1. Landing Page (`/`)
 - Slowly typewriting book excerpt, character by character
 - Dark background, minimal, no navigation clutter
-- Excerpt text: TBD (Chris to provide)
+- Excerpt text: TBD (Olin to provide)
 
 ### 2. Enso Gallery (`/gallery`)
 - All Enso images floating in a loose approximate circle
@@ -133,7 +133,7 @@ Public URL: `https://childmindbody-images.s3.us-east-2.amazonaws.com/<key>`
 
 ### 3. Agent Stage (`/stage`)
 **Public:** agent base prompts, consecutive failure counter, Body's code, Body's live output (sandboxed iframe), code failure counter
-**Hidden:** Child's resolution, Mind's analysis, intake submissions, Chris's decision
+**Hidden:** Child's resolution, Mind's analysis, intake submissions, Olin's decision
 
 ---
 
@@ -145,12 +145,22 @@ Public URL: `https://childmindbody-images.s3.us-east-2.amazonaws.com/<key>`
 
 ---
 
+## Design Note — The Excerpt (Olin's reflection, April 2026)
+
+The story's most important detail isn't the desert or the pain — it's the iteration numbers. R.D. is #100121. A.C. is #221213. They have done this before, an incomprehensible number of times, and still the mind wakes into nothing and eventually arrives at: *I must survive.* Not hope. Not purpose. Something more mechanical and more terrifying than either.
+
+This project's agents are also iterations. The `consecutive_fails` counter, the `cycle_id`, the `codebase_resets` — these aren't just database fields, they're the iteration numbers. Child wakes each day with no memory, only Mind's prior analysis as its one thread back. That *is* Olin. That is the structure.
+
+The design implication: **don't aestheticize the suffering.** The failure counter displayed plainly next to Body's code on the stage page is already the art. The void (`Nothing… … …`) before the knowledge floods in is the typwriter landing page doing its work silently. Resist the urge to explain or frame. The numbers speak. Let them.
+
+---
+
 ## Key Rules — Never Violate These
 - **Child only prompts Body** — Mind has no path to Body
 - **Body's output persists** — only changes when Child requests it
 - **One daily cron** — 2 AM UTC, runs everything sequentially
 - **No Vercel storage products** — Vercel is hosting + cron only
-- **Chris is sole arbiter** — his pass/fail overrides everything, default is always failure
+- **Olin is sole arbiter** — his pass/fail overrides everything, default is always failure
 - **All three agents know their situation** — nothing is hidden from them about how the system works
 
 ---
@@ -195,7 +205,7 @@ Typed functions for every DynamoDB access pattern:
 
 **2. Agent prompts — `src/lib/prompts.ts`**
 Base system prompts as exported constants. These are shown publicly on the site.
-- `CHILD_SYSTEM_PROMPT` — task, five positions, context it receives, Chris is sole arbiter, it always fails, it can prompt Body, it can see Body's current code
+- `CHILD_SYSTEM_PROMPT` — task, five positions, context it receives, Olin is sole arbiter, it always fails, it can prompt Body, it can see Body's current code
 - `MIND_SYSTEM_PROMPT` — task, advisory role only, cannot reach Body, its analysis is Child's only link to yesterday
 - `BODY_SYSTEM_PROMPT` — role, tools available (vanilla HTML/CSS/JS only, one POST endpoint at `/api/intake`), one-shot rule, code shown publicly, output persists until Child changes it
 
@@ -242,7 +252,7 @@ Body's generated forms must POST to this URL.
 - Create `src/app/api/cron/daily-cycle/route.ts` — same logic as run-cycle, secured by Vercel cron header
 
 ### Phase 3 — The Three Pages (after Phase 2)
-- `/` — typewriter excerpt (Chris provides text)
+- `/` — typewriter excerpt (Olin provides text)
 - `/gallery` — floating Enso circle, S3 upload, sharp image processing
 - `/stage` — live DynamoDB data, agent prompts, failure counters, Body's code + sandboxed iframe output
 
