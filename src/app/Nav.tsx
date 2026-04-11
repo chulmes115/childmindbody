@@ -7,11 +7,11 @@ import { usePathname } from 'next/navigation'
 const PROJECTS = [
   {
     label: 'childmindbody',
-    href: '/read',
+    href: '/stage',
     pages: [
-      { href: '/read',    label: 'read'    },
-      { href: '/gallery', label: 'gallery' },
-      { href: '/stage',   label: 'stage'   },
+      { href: '/stage',   label: 'childmindbody'    },
+      { href: '/gallery', label: 'imperfect gallery' },
+      { href: '/read',    label: "Mind's ruminations" },
     ],
   },
   // { label: 'next project', href: '/...', pages: [...] },
@@ -62,17 +62,17 @@ export default function Nav() {
         </div>
       </div>
 
-      {/* Sub-row: pages within the active project */}
+      {/* Sub-row: pages within the active project — centered, more visible */}
       {activeProject && (
-        <div className="flex items-center gap-6 px-8 h-9 border-t border-white/6">
+        <div className="flex items-center justify-center gap-10 h-10 border-t border-white/6">
           {activeProject.pages.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
               className={`text-xs transition-colors ${
                 path === href
-                  ? 'text-white/55'
-                  : 'text-white/20 hover:text-white/40'
+                  ? 'text-white/70 underline underline-offset-4'
+                  : 'text-white/35 hover:text-white/60'
               }`}
             >
               {label}
