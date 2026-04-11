@@ -149,3 +149,74 @@ export async function getIntakeResponses(cycleId: number): Promise<string[]> {
   )
   return (Items ?? []).map((item) => item.response as string)
 }
+
+// ─── Body's Message state ─────────────────────────────────────────────────────
+// pk='BODY_MESSAGE'  sk='STATUS'  →  { word_position, last_image_url, last_prompt }
+
+export type BodyMessageStatus = {
+  wordPosition: number
+  lastImageUrl?: string
+  lastPrompt?: string
+}
+
+export async function getBodyMessageStatus(): Promise<BodyMessageStatus> {
+  const { Item } = await dynamo.send(
+    new GetCommand({ TableName: TABLE, Key: { pk: 'BODY_MESSAGE', sk: 'STATUS' } })
+  )
+  if (!Item) return { wordPosition: 0 }
+  return {
+    wordPosition: (Item.word_position as number) ?? 0,
+    lastImageUrl: Item.last_image_url as string | undefined,
+    lastPrompt: Item.last_prompt as string | undefined,
+  }
+}
+
+export async function saveBodyMessageStatus(status: BodyMessageStatus): Promise<void> {
+  await dynamo.send(
+    new PutCommand({
+      TableName: TABLE,
+      Item: {
+        pk: 'BODY_MESSAGE',
+        sk: 'STATUS',
+        word_position: status.wordPosition,
+        ...(status.lastImageUrl ? { last_image_url: status.lastImageUrl } : {}),
+        ...(status.lastPrompt   ? { last_prompt:    status.lastPrompt   } : {}),
+      },
+    })
+  )
+}
+
+// ─── Inspiration images ───────────────────────────────────────────────────────
+// pk='INSPIRATION'  sk='<timestamp>'  →  { url, analysis, filename }
+
+export type InspirationImage = {
+  url: string
+  analysis: string
+  filename: string
+  timestamp: string
+}
+
+export async function saveInspirationImage(img: InspirationImage): Promise<void> {
+  await dynamo.send(
+    new PutCommand({
+      TableName: TABLE,
+      Item: { pk: 'INSPIRATION', sk: img.timestamp, ...img },
+    })
+  )
+}
+
+export async function getInspirationImages(): Promise<InspirationImage[]> {
+  const { Items } = await dynamo.send(
+    new QueryCommand({
+      TableName: TABLE,
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': 'INSPIRATION' },
+    })
+  )
+  return (Items ?? []).map((item) => ({
+    url:       item.url       as string,
+    analysis:  item.analysis  as string,
+    filename:  item.filename  as string,
+    timestamp: item.sk        as string,
+  }))
+}

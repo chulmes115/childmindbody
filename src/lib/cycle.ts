@@ -8,9 +8,13 @@ import {
   getCurrentBodyCode,
   saveBodyCode,
   getIntakeResponses,
+  getBodyMessageStatus,
+  saveBodyMessageStatus,
+  getInspirationImages,
 } from './db'
 import { runChild, runMind, runBody, condenseIntake } from './agents'
 import { SEED_PROMPT } from './prompts'
+import { runBodyMessageStep } from './bodyMessage'
 
 export type CycleResult = {
   ok: boolean
@@ -102,6 +106,24 @@ export async function runCycle(): Promise<CycleResult> {
 
   // ── Step 5: Increment cycle counter ────────────────────────────────────────
   await incrementCycleId()
+
+  // ── Step 6: Body's Message — image generation ───────────────────────────────
+  const [bodyMsgStatus, inspirationImages] = await Promise.all([
+    getBodyMessageStatus(),
+    getInspirationImages(),
+  ])
+
+  const bodyMsgResult = await runBodyMessageStep({
+    wordPosition:            bodyMsgStatus.wordPosition,
+    lastImageUrl:            bodyMsgStatus.lastImageUrl,
+    inspirationDescriptions: inspirationImages.map((img) => img.analysis),
+  })
+
+  await saveBodyMessageStatus({
+    wordPosition:  bodyMsgResult.nextWordPosition,
+    lastImageUrl:  bodyMsgResult.imageUrl,
+    lastPrompt:    bodyMsgResult.prompt,
+  })
 
   return {
     ok: true,
