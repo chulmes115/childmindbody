@@ -24,8 +24,15 @@ export async function POST(request: Request) {
     ContentType: file.type || 'image/jpeg',
   }))
 
-  const url      = `https://${BUCKET}.s3.${region}.amazonaws.com/${key}`
-  const analysis = await analyzeInspirationImage(url)
+  const url = `https://${BUCKET}.s3.${region}.amazonaws.com/${key}`
+
+  let analysis: string
+  try {
+    analysis = await analyzeInspirationImage(url)
+  } catch (err) {
+    console.error('analyzeInspirationImage failed:', err)
+    return Response.json({ error: 'Image uploaded but analysis failed — try again' }, { status: 500 })
+  }
 
   await saveInspirationImage({ url, analysis, filename: file.name, timestamp })
 
