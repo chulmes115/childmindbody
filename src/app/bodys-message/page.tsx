@@ -18,7 +18,7 @@ export default async function BodysMessage() {
 
   return (
     <main
-      className="min-h-screen bg-black text-white/80 pt-20"
+      className="min-h-screen text-white/80 pt-20"
       style={{ fontFamily: 'var(--font-geist-sans)' }}
     >
       <div className="max-w-3xl mx-auto px-8 py-12 space-y-20">

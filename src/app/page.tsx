@@ -24,7 +24,7 @@ const AI_DESCRIPTION = `Abnormally Normal is an ongoing, ever-evolving collectio
 export default function Home() {
   return (
     <main
-      className="min-h-screen bg-black px-10 pt-28 pb-24"
+      className="min-h-screen px-10 pt-28 pb-24"
       style={{ fontFamily: 'var(--font-geist-sans)' }}
     >
       <div className="max-w-2xl mx-auto space-y-20">

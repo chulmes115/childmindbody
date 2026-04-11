@@ -13,7 +13,7 @@ export default async function AdminPage() {
 
   if (!isAuthed) {
     return (
-      <main className="min-h-screen bg-black flex items-center justify-center" style={{ fontFamily: 'var(--font-geist-mono)' }}>
+      <main className="min-h-screen flex items-center justify-center" style={{ fontFamily: 'var(--font-geist-mono)' }}>
         <form action={login} className="flex flex-col gap-4 w-64">
           <p className="text-white/30 text-xs uppercase tracking-widest mb-2">admin</p>
           <input
@@ -55,7 +55,7 @@ export default async function AdminPage() {
   const codeFails = (codeFailCount as number) ?? 0
 
   return (
-    <main className="min-h-screen bg-black text-white/80" style={{ fontFamily: 'var(--font-geist-mono)' }}>
+    <main className="min-h-screen text-white/80" style={{ fontFamily: 'var(--font-geist-mono)' }}>
 
       {/* Header */}
       <header className="border-b border-white/10 px-8 py-5 flex items-baseline gap-6">

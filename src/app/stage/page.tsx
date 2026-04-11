@@ -16,7 +16,7 @@ export default async function Stage() {
   const html = bodyCode ?? ''
 
   return (
-    <main className="min-h-screen bg-black text-white/80 pt-20" style={{ fontFamily: 'var(--font-geist-mono)' }}>
+    <main className="min-h-screen text-white/80 pt-20" style={{ fontFamily: 'var(--font-geist-mono)' }}>
 
       {/* Header */}
       <header className="border-b border-white/10 px-8 py-6 flex items-baseline gap-8">
