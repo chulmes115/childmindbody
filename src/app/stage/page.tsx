@@ -1,7 +1,14 @@
-import { getMeta, getCurrentBodyCode, getCurrentCycleId } from '@/lib/db'
+import { getMeta, getCurrentBodyCode, getCurrentCycleId, getCycleRecord } from '@/lib/db'
 import { CHILD_SYSTEM_PROMPT, MIND_SYSTEM_PROMPT, BODY_SYSTEM_PROMPT } from '@/lib/prompts'
+import BodyOutput from './BodyOutput'
 
 export const dynamic = 'force-dynamic'
+
+const PROMPTS = [
+  { label: 'inside Child', prompt: CHILD_SYSTEM_PROMPT },
+  { label: 'inside Mind',  prompt: MIND_SYSTEM_PROMPT  },
+  { label: 'inside Body',  prompt: BODY_SYSTEM_PROMPT  },
+]
 
 export default async function Stage() {
   const [consecutiveFails, codeFailCount, cycleId, bodyCode] = await Promise.all([
@@ -11,9 +18,11 @@ export default async function Stage() {
     getCurrentBodyCode(),
   ])
 
-  const fails = (consecutiveFails as number) ?? 0
+  const currentRecord = cycleId > 0 ? await getCycleRecord(cycleId) : null
+
+  const fails     = (consecutiveFails as number) ?? 0
   const codeFails = (codeFailCount as number) ?? 0
-  const html = bodyCode ?? ''
+  const html      = bodyCode ?? ''
 
   return (
     <main className="min-h-screen text-white/80 pt-20" style={{ fontFamily: 'var(--font-geist-mono)' }}>
@@ -31,50 +40,61 @@ export default async function Stage() {
 
       <div className="max-w-4xl mx-auto px-8 py-12 space-y-16">
 
-        {/* Agent prompts */}
-        <section>
-          <h2 className="text-xs tracking-widest uppercase text-white/50 mb-8">The Prompts</h2>
-          <div className="space-y-10">
-            {[
-              { label: 'CHILD', prompt: CHILD_SYSTEM_PROMPT },
-              { label: 'MIND',  prompt: MIND_SYSTEM_PROMPT  },
-              { label: 'BODY',  prompt: BODY_SYSTEM_PROMPT  },
-            ].map(({ label, prompt }) => (
-              <div key={label}>
-                <p className="text-xs tracking-widest text-white/50 mb-3">{label}</p>
-                <pre className="text-white/75 text-xs leading-relaxed whitespace-pre-wrap border border-white/15 p-5 rounded">
-                  {prompt}
-                </pre>
-              </div>
-            ))}
-          </div>
+        {/* Prompt drawers — inside Child / Mind / Body */}
+        <section className="flex gap-3 flex-wrap">
+          {PROMPTS.map(({ label, prompt }) => (
+            <details key={label} className="group w-full">
+              <summary className="inline-flex items-center gap-2 text-xs text-white/40 border border-white/15 px-4 py-2 rounded cursor-pointer hover:text-white/65 hover:border-white/30 transition-colors list-none w-fit">
+                <span className="group-open:hidden">↓</span>
+                <span className="hidden group-open:inline">↑</span>
+                {label}
+              </summary>
+              <pre className="mt-3 text-white/65 text-xs leading-relaxed whitespace-pre-wrap border border-white/10 p-5 rounded">
+                {prompt}
+              </pre>
+            </details>
+          ))}
         </section>
 
-        {/* Body's live output */}
+        {/* Body's output (with output / code tab) */}
         <section>
-          <h2 className="text-xs tracking-widest uppercase text-white/50 mb-4">Body&apos;s Output</h2>
-          {html ? (
-            <iframe
-              srcDoc={html}
-              sandbox="allow-scripts allow-forms allow-same-origin"
-              className="w-full border border-white/15 rounded bg-white"
-              style={{ height: '480px' }}
-              title="Body's current output"
-            />
+          <BodyOutput html={html} />
+        </section>
+
+        {/* Child's attempt */}
+        <section>
+          <p className="text-xs tracking-widest uppercase text-white/50 mb-4">Child&apos;s attempt</p>
+          {currentRecord?.child_resolution ? (
+            <pre className="text-white/75 text-xs leading-relaxed whitespace-pre-wrap border border-white/15 p-5 rounded">
+              {currentRecord.child_resolution}
+            </pre>
           ) : (
-            <p className="text-white/50 text-sm italic">Body has not produced output yet.</p>
+            <p className="text-white/30 text-sm italic">No resolution yet — trigger a cycle to begin.</p>
           )}
         </section>
 
-        {/* Body's raw code */}
-        {html && (
-          <section>
-            <h2 className="text-xs tracking-widest uppercase text-white/50 mb-4">Body&apos;s Code</h2>
-            <pre className="text-white/65 text-xs leading-relaxed whitespace-pre-wrap border border-white/15 p-5 rounded overflow-x-auto">
-              {html}
+        {/* Mind's analysis */}
+        <section>
+          <div className="flex items-baseline gap-4 mb-4">
+            <p className="text-xs tracking-widest uppercase text-white/50">Mind&apos;s analysis</p>
+            {currentRecord?.mind_rec && (
+              <span className={`text-xs px-2 py-0.5 border rounded uppercase tracking-wider ${
+                currentRecord.mind_rec === 'pass'
+                  ? 'border-white/30 text-white/60'
+                  : 'border-white/10 text-white/25'
+              }`}>
+                {currentRecord.mind_rec}
+              </span>
+            )}
+          </div>
+          {currentRecord?.mind_analysis ? (
+            <pre className="text-white/75 text-xs leading-relaxed whitespace-pre-wrap border border-white/15 p-5 rounded">
+              {currentRecord.mind_analysis}
             </pre>
-          </section>
-        )}
+          ) : (
+            <p className="text-white/30 text-sm italic">No analysis yet — trigger a cycle to begin.</p>
+          )}
+        </section>
 
       </div>
     </main>
