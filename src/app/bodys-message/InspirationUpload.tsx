@@ -15,6 +15,24 @@ export default function InspirationUpload({
   const [error, setError]         = useState('')
   const fileRef                   = useRef<HTMLInputElement>(null)
 
+  async function resizeImage(file: File, maxPx = 1400): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height))
+        const w = Math.round(img.width  * scale)
+        const h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width  = w
+        canvas.height = h
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Canvas export failed')), 'image/jpeg', 0.88)
+      }
+      img.onerror = reject
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
   async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const file = fileRef.current?.files?.[0]
@@ -23,20 +41,25 @@ export default function InspirationUpload({
     setUploading(true)
     setError('')
 
-    const form = new FormData()
-    form.append('image', file)
+    try {
+      const blob = await resizeImage(file)
+      const form = new FormData()
+      form.append('image', blob, file.name)
 
-    const res  = await fetch('/api/bodys-message/upload', { method: 'POST', body: form })
-    const data = await res.json()
+      const res  = await fetch('/api/bodys-message/upload', { method: 'POST', body: form })
+      const data = await res.json()
 
-    if (data.ok) {
-      setImages((prev) => [
-        { url: data.url, analysis: data.analysis, filename: file.name, timestamp: new Date().toISOString() },
-        ...prev,
-      ])
-      if (fileRef.current) fileRef.current.value = ''
-    } else {
-      setError(data.error ?? 'Upload failed')
+      if (data.ok) {
+        setImages((prev) => [
+          { url: data.url, analysis: data.analysis, filename: file.name, timestamp: new Date().toISOString() },
+          ...prev,
+        ])
+        if (fileRef.current) fileRef.current.value = ''
+      } else {
+        setError(data.error ?? 'Upload failed')
+      }
+    } catch {
+      setError('Upload failed — please try again')
     }
     setUploading(false)
   }
