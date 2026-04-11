@@ -21,11 +21,11 @@ export default async function Stage() {
       {/* Header */}
       <header className="border-b border-white/10 px-8 py-6 flex items-baseline gap-8">
         <h1 className="text-white text-sm tracking-widest uppercase">childmindbody</h1>
-        <span className="text-white/40 text-xs">cycle {cycleId}</span>
-        <span className="ml-auto text-xs text-white/40">
-          consecutive failures: <span className="text-white/80">{fails}</span>
-          <span className="mx-4 text-white/20">·</span>
-          code failures: <span className="text-white/80">{codeFails}</span>
+        <span className="text-white/55 text-xs">cycle {cycleId}</span>
+        <span className="ml-auto text-xs text-white/55">
+          consecutive failures: <span className="text-white/90">{fails}</span>
+          <span className="mx-4 text-white/30">·</span>
+          code failures: <span className="text-white/90">{codeFails}</span>
         </span>
       </header>
 
@@ -33,7 +33,7 @@ export default async function Stage() {
 
         {/* Agent prompts */}
         <section>
-          <h2 className="text-xs tracking-widest uppercase text-white/30 mb-8">The Prompts</h2>
+          <h2 className="text-xs tracking-widest uppercase text-white/50 mb-8">The Prompts</h2>
           <div className="space-y-10">
             {[
               { label: 'CHILD', prompt: CHILD_SYSTEM_PROMPT },
@@ -41,8 +41,8 @@ export default async function Stage() {
               { label: 'BODY',  prompt: BODY_SYSTEM_PROMPT  },
             ].map(({ label, prompt }) => (
               <div key={label}>
-                <p className="text-xs tracking-widest text-white/30 mb-3">{label}</p>
-                <pre className="text-white/60 text-xs leading-relaxed whitespace-pre-wrap border border-white/10 p-5 rounded">
+                <p className="text-xs tracking-widest text-white/50 mb-3">{label}</p>
+                <pre className="text-white/75 text-xs leading-relaxed whitespace-pre-wrap border border-white/15 p-5 rounded">
                   {prompt}
                 </pre>
               </div>
@@ -52,25 +52,25 @@ export default async function Stage() {
 
         {/* Body's live output */}
         <section>
-          <h2 className="text-xs tracking-widest uppercase text-white/30 mb-4">Body&apos;s Output</h2>
+          <h2 className="text-xs tracking-widest uppercase text-white/50 mb-4">Body&apos;s Output</h2>
           {html ? (
             <iframe
               srcDoc={html}
               sandbox="allow-scripts allow-forms allow-same-origin"
-              className="w-full border border-white/10 rounded bg-white"
+              className="w-full border border-white/15 rounded bg-white"
               style={{ height: '480px' }}
               title="Body's current output"
             />
           ) : (
-            <p className="text-white/30 text-sm italic">Body has not produced output yet.</p>
+            <p className="text-white/50 text-sm italic">Body has not produced output yet.</p>
           )}
         </section>
 
         {/* Body's raw code */}
         {html && (
           <section>
-            <h2 className="text-xs tracking-widest uppercase text-white/30 mb-4">Body&apos;s Code</h2>
-            <pre className="text-white/50 text-xs leading-relaxed whitespace-pre-wrap border border-white/10 p-5 rounded overflow-x-auto">
+            <h2 className="text-xs tracking-widest uppercase text-white/50 mb-4">Body&apos;s Code</h2>
+            <pre className="text-white/65 text-xs leading-relaxed whitespace-pre-wrap border border-white/15 p-5 rounded overflow-x-auto">
               {html}
             </pre>
           </section>

@@ -26,8 +26,8 @@ export default async function BodysMessage() {
         {/* AI Generated — current image */}
         <section>
           <div className="flex items-baseline justify-between mb-6">
-            <p className="text-white/25 text-xs uppercase tracking-widest">Body's message</p>
-            <p className="text-white/18 text-xs">— AI generated</p>
+            <p className="text-white/45 text-xs uppercase tracking-widest">Body's message</p>
+            <p className="text-white/35 text-xs">— AI generated</p>
           </div>
 
           {status.lastImageUrl ? (
@@ -37,7 +37,7 @@ export default async function BodysMessage() {
                 alt="Body's current message"
                 className="w-full rounded border border-white/10"
               />
-              <div className="flex items-center justify-between text-xs text-white/25">
+              <div className="flex items-center justify-between text-xs text-white/45">
                 <span>
                   cycle {cycleNumber} of {totalCycles} · words 1–{status.wordPosition} of {EXCERPT_WORD_COUNT}
                 </span>
@@ -52,10 +52,10 @@ export default async function BodysMessage() {
               </div>
               {status.lastPrompt && (
                 <details className="group">
-                  <summary className="text-xs text-white/20 cursor-pointer hover:text-white/40 transition-colors list-none">
+                  <summary className="text-xs text-white/40 cursor-pointer hover:text-white/60 transition-colors list-none">
                     prompt used ↓
                   </summary>
-                  <p className="mt-3 text-white/30 text-xs leading-relaxed border border-white/8 rounded p-4">
+                  <p className="mt-3 text-white/50 text-xs leading-relaxed border border-white/15 rounded p-4">
                     {status.lastPrompt}
                   </p>
                 </details>
@@ -71,8 +71,8 @@ export default async function BodysMessage() {
         {/* Human Created — Inspiration */}
         <section>
           <div className="flex items-baseline justify-between mb-6">
-            <p className="text-white/25 text-xs uppercase tracking-widest">Inspiration</p>
-            <p className="text-white/18 text-xs">— Human created, Olin</p>
+            <p className="text-white/45 text-xs uppercase tracking-widest">Inspiration</p>
+            <p className="text-white/35 text-xs">— Human created, Olin</p>
           </div>
           <InspirationUpload initial={inspirationImages.slice().reverse()} />
         </section>

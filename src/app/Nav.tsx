@@ -28,7 +28,7 @@ export default function Nav() {
         <Link
           href="/"
           className={`text-xs tracking-widest uppercase transition-colors shrink-0 ${
-            path === '/' ? 'text-white/70' : 'text-white/35 hover:text-white/55'
+            path === '/' ? 'text-white/90' : 'text-white/55 hover:text-white/75'
           }`}
         >
           Abnormally Normal
@@ -42,8 +42,8 @@ export default function Nav() {
               href={href}
               className={`text-xs transition-colors ${
                 path === href
-                  ? 'text-white/70 underline underline-offset-4'
-                  : 'text-white/30 hover:text-white/55'
+                  ? 'text-white/90 underline underline-offset-4'
+                  : 'text-white/50 hover:text-white/75'
               }`}
             >
               {label}

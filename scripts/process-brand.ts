@@ -56,10 +56,21 @@ async function main() {
     faviconRgba[i * 4 + 3] = 255               // A: fully opaque
   }
 
+  // Trim excess black border, then resize the circle to 70% of the 512px square,
+  // and extend canvas to full 512×512 with black — gives centered breathing room.
+  const innerSize = Math.round(512 * 0.70)  // 358px — circle occupies 70% of icon
   const faviconPng = await sharp(faviconRgba, {
     raw: { width, height, channels: 4 },
   })
-    .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 1 } })
+    .trim({ background: { r: 0, g: 0, b: 0 }, threshold: 10 })
+    .resize(innerSize, innerSize, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 1 } })
+    .extend({
+      top:    Math.floor((512 - innerSize) / 2),
+      bottom: Math.ceil((512 - innerSize) / 2),
+      left:   Math.floor((512 - innerSize) / 2),
+      right:  Math.ceil((512 - innerSize) / 2),
+      background: { r: 0, g: 0, b: 0, alpha: 1 },
+    })
     .png()
     .toBuffer()
 
