@@ -24,6 +24,9 @@ export async function POST(request: Request) {
     response = JSON.stringify(fields)
   }
 
+  if (response.length > 8000)
+    return Response.json({ error: 'Submission too long' }, { status: 413 })
+
   await saveIntakeResponse(cycleId, response)
 
   return Response.json({ ok: true })

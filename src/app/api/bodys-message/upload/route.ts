@@ -8,6 +8,9 @@ export async function POST(request: Request) {
   const file = formData.get('image') as File | null
   if (!file) return Response.json({ error: 'No image provided' }, { status: 400 })
 
+  if (file.size > 10 * 1024 * 1024)
+    return Response.json({ error: 'File too large (max 10 MB)' }, { status: 413 })
+
   const buffer    = Buffer.from(await file.arrayBuffer())
   const timestamp = new Date().toISOString()
   const ext       = file.name.split('.').pop() ?? 'jpg'
