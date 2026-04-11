@@ -58,7 +58,7 @@ export default function Home() {
 
   return (
     <main
-      className="h-screen bg-black flex overflow-hidden"
+      className="h-screen flex overflow-hidden pt-11"
       style={{ fontFamily: 'var(--font-geist-sans)' }}
     >
       {/* Mind's Assessment */}

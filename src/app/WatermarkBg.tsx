@@ -22,7 +22,7 @@ export default function WatermarkBg() {
           width:   '65vmin',
           height:  '65vmin',
           objectFit: 'contain',
-          opacity: 0.28,
+          opacity: 0.20,
         }}
       />
     </div>
