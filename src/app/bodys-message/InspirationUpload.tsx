@@ -5,8 +5,10 @@ import { InspirationImage } from '@/lib/db'
 
 export default function InspirationUpload({
   initial,
+  showUpload = false,
 }: {
   initial: InspirationImage[]
+  showUpload?: boolean
 }) {
   const [images, setImages]     = useState<InspirationImage[]>(initial)
   const [uploading, setUploading] = useState(false)
@@ -42,8 +44,8 @@ export default function InspirationUpload({
   return (
     <div className="space-y-8">
 
-      {/* Upload form */}
-      <form onSubmit={handleUpload} className="flex items-center gap-4">
+      {/* Upload form — admin only */}
+      {showUpload && <form onSubmit={handleUpload} className="flex items-center gap-4">
         <input
           ref={fileRef}
           type="file"
@@ -58,7 +60,7 @@ export default function InspirationUpload({
           {uploading ? 'analyzing…' : 'add work'}
         </button>
         {error && <span className="text-xs text-red-400/70">{error}</span>}
-      </form>
+      </form>}
 
       {/* Grid */}
       {images.length === 0 ? (

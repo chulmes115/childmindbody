@@ -1,8 +1,9 @@
 import { cookies } from 'next/headers'
-import { getMeta, getCurrentCycleId, getCycleRecord } from '@/lib/db'
+import { getMeta, getCurrentCycleId, getCycleRecord, getInspirationImages } from '@/lib/db'
 import { login, logout } from './actions'
 import DecisionButtons from './DecisionButtons'
 import TriggerCycle from './TriggerCycle'
+import InspirationUpload from '@/app/bodys-message/InspirationUpload'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,10 +35,11 @@ export default async function AdminPage() {
   }
 
   // ── Fetch current state ─────────────────────────────────────────────────────
-  const [cycleId, consecutiveFails, codeFailCount] = await Promise.all([
+  const [cycleId, consecutiveFails, codeFailCount, inspirationImages] = await Promise.all([
     getCurrentCycleId(),
     getMeta('consecutive_fails'),
     getMeta('code_fail_count'),
+    getInspirationImages(),
   ])
 
   const currentRecord = cycleId > 0 ? await getCycleRecord(cycleId) : null
@@ -163,6 +165,18 @@ export default async function AdminPage() {
             </div>
           </section>
         )}
+
+        {/* Inspiration — Body's message reference art */}
+        <section>
+          <h2 className="text-xs tracking-widest uppercase text-white/30 mb-6">Inspiration</h2>
+          <p className="text-white/20 text-xs mb-6">
+            Your uploaded artwork. Analyzed by Claude and used as creative reference for Body&apos;s message image generation.
+          </p>
+          <InspirationUpload
+            initial={inspirationImages.slice().reverse()}
+            showUpload={true}
+          />
+        </section>
 
       </div>
     </main>
