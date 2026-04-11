@@ -75,7 +75,8 @@ async function generateAndStore(prompt: string): Promise<string> {
     quality: 'standard',
   })
 
-  const tempUrl = response.data[0].url!
+  const tempUrl = response.data?.[0]?.url
+  if (!tempUrl) throw new Error('DALL-E returned no image URL')
   const imgRes  = await fetch(tempUrl)
   const buffer  = Buffer.from(await imgRes.arrayBuffer())
   const key     = `body-message/${Date.now()}.png`
