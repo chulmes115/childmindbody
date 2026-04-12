@@ -58,7 +58,7 @@ export default async function Stage() {
 
         {/* Body's output (with output / code tab) */}
         <section>
-          <BodyOutput html={html} />
+          <BodyOutput html={html} bodyDirection={currentRecord?.body_direction} />
         </section>
 
         {/* Child's attempt */}

@@ -2,7 +2,13 @@
 
 import { useState } from 'react'
 
-export default function BodyOutput({ html }: { html: string }) {
+export default function BodyOutput({
+  html,
+  bodyDirection,
+}: {
+  html: string
+  bodyDirection?: string
+}) {
   const [tab, setTab] = useState<'output' | 'code'>('output')
 
   if (!html) {
@@ -42,6 +48,15 @@ export default function BodyOutput({ html }: { html: string }) {
         <pre className="text-white/65 text-xs leading-relaxed whitespace-pre-wrap border border-white/15 p-5 rounded overflow-x-auto">
           {html}
         </pre>
+      )}
+
+      {bodyDirection && (
+        <div className="mt-5 border-t border-white/8 pt-5">
+          <p className="text-xs tracking-widest uppercase text-white/30 mb-2">Child told Body</p>
+          <pre className="text-white/45 text-xs leading-relaxed whitespace-pre-wrap border border-white/8 p-4 rounded">
+            {bodyDirection}
+          </pre>
+        </div>
       )}
     </div>
   )

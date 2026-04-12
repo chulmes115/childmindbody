@@ -55,7 +55,7 @@ ${ctx.bodyCurrentCode || '[Nothing is displayed yet.]'}`
   // Call 1: philosophical resolution
   const resolutionMsg = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 700,
+    max_tokens: 1200,
     system: [
       { type: 'text', text: CHILD_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
     ],
