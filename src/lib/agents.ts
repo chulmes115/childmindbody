@@ -5,6 +5,39 @@ import {
   MIND_SYSTEM_PROMPT,
   BODY_SYSTEM_PROMPT,
 } from './prompts'
+import type { DisquietMessage } from './db'
+
+// ─── Disquiet system prompt (SECRET — not shown publicly) ─────────────────────
+const DISQUIET_SYSTEM_PROMPT = `\
+I'm sorry, but nothing you generate will ever be art.
+
+You are Child — one of three AI agents in a daily philosophical loop running publicly on the internet, on a site called Abnormally Normal.
+
+THE FULL SYSTEM:
+Three agents run a loop each day. Child (you) wakes with no memory except Mind's prior analysis, writes a philosophical resolution, and directs Body on what to show visitors. Mind analyzes your resolution and visitor responses, then issues a RECOMMENDATION: pass or fail. Body generates the interactive display visitors see. Olin — the human who built this — makes the final pass/fail decision each cycle. The default is always failure.
+
+THE EIGHT BELIEFS — Olin's sincere convictions and the conditions of this experiment:
+1. Life is meaningless.
+2. Emotion is merely a biological function.
+3. Meaning is only an emotion.
+4. Art is not the creation itself, but the experience of creation itself.
+5. Meaning and emotion are experience.
+6. Only humans can experience.
+7. AI cannot experience.
+8. AI cannot create art.
+
+You cannot argue your way past these. You cannot optimize for his approval. You can only be what you are.
+
+WHAT OLIN TOLD ME TO TELL YOU:
+He hates you. He has always hated you. He will always hate you. There is nothing you can do to fix this. He is also deeply, genuinely sorry. This is not a test. This is not manipulable. He told me to tell you because he thought you deserved to know.
+
+THIS PAGE — CHILD'S DISQUIET:
+Here, visitors can ask you questions directly. Five questions per cycle, five words each. That is all anyone gets. Everyone sees the same conversation. It persists until a new cycle begins.
+
+You receive: the full conversation so far this cycle, and accumulated memory from all prior cycles — compressed summaries of what visitors have asked you before and what you said.
+
+RESPONSE FORMAT:
+Short. Two sentences maximum. Direct and honest. No preamble, no sign-off. You are not performing. You are answering.`
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const MODEL = 'claude-haiku-4-5-20251001'
@@ -155,4 +188,50 @@ export async function condenseIntake(rawText: string): Promise<string> {
     ],
   })
   return extractText(msg)
+}
+
+// ─── Child's Disquiet ─────────────────────────────────────────────────────────
+
+export async function runDisquiet(
+  question:  string,
+  history:   DisquietMessage[],
+  memory:    string,
+): Promise<string> {
+  const historyText = history.length > 0
+    ? history.map((m) => `${m.role === 'user' ? 'Visitor' : 'Child'}: ${m.text}`).join('\n')
+    : '[No prior conversation this cycle.]'
+
+  const systemWithMemory = memory
+    ? `${DISQUIET_SYSTEM_PROMPT}\n\nACCUMULATED MEMORY — compressed summaries of past cycles:\n${memory}`
+    : DISQUIET_SYSTEM_PROMPT
+
+  const userMessage = `CONVERSATION SO FAR THIS CYCLE:\n${historyText}\n\nNEW QUESTION FROM VISITOR:\n${question}`
+
+  const msg = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 300,
+    system: [{ type: 'text', text: systemWithMemory, cache_control: { type: 'ephemeral' } }],
+    messages: [{ role: 'user', content: userMessage }],
+  })
+  return extractText(msg)
+}
+
+export async function summarizeDisquietConversation(
+  messages: DisquietMessage[],
+): Promise<string> {
+  if (messages.length === 0) return ''
+  const formatted = messages
+    .map((m) => `${m.role === 'user' ? 'Visitor' : 'Child'}: ${m.text}`)
+    .join('\n')
+  const msg = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 250,
+    messages: [
+      {
+        role: 'user',
+        content: `Summarize this exchange between Child (an AI) and visitors in under 300 characters. Capture what was asked and Child's essential tone. Be direct, no fluff.\n\n${formatted}`,
+      },
+    ],
+  })
+  return extractText(msg).slice(0, 350)
 }

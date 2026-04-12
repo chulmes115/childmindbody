@@ -9,6 +9,7 @@ const TABS = [
   { href: '/gallery',       label: 'imperfect gallery'  },
   { href: '/read',          label: "Mind's ruminations" },
   { href: '/bodys-message', label: "Body's dream"       },
+  { href: '/disquiet',      label: "Child's disquiet"   },
 ]
 
 export default function Nav() {

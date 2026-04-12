@@ -240,6 +240,80 @@ export async function saveGalleryCompliment(text: string): Promise<void> {
   )
 }
 
+// ─── Child's Disquiet ─────────────────────────────────────────────────────────
+// Messages: pk='DISQUIET_CONVO#${cycleId}'  sk='<ISO timestamp>'  → { role, text }
+// Status:   pk='DISQUIET'  sk='STATUS'                             → { cycle_id, count }
+// Memory:   pk='DISQUIET'  sk='MEMORY'                             → { text }
+
+export type DisquietMessage = {
+  role:      'user' | 'child'
+  text:      string
+  timestamp: string
+}
+
+export async function getDisquietMessages(cycleId: number): Promise<DisquietMessage[]> {
+  const { Items } = await dynamo.send(
+    new QueryCommand({
+      TableName: TABLE,
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': `DISQUIET_CONVO#${cycleId}` },
+      ScanIndexForward: true,
+    })
+  )
+  return (Items ?? []).map((item) => ({
+    role:      item.role      as 'user' | 'child',
+    text:      item.text      as string,
+    timestamp: item.sk        as string,
+  }))
+}
+
+export async function saveDisquietMessage(
+  cycleId: number,
+  role: 'user' | 'child',
+  text: string,
+): Promise<void> {
+  const ts = new Date().toISOString()
+  await dynamo.send(
+    new PutCommand({
+      TableName: TABLE,
+      Item: { pk: `DISQUIET_CONVO#${cycleId}`, sk: ts, role, text },
+    })
+  )
+}
+
+export async function getDisquietCount(cycleId: number): Promise<number> {
+  const { Item } = await dynamo.send(
+    new GetCommand({ TableName: TABLE, Key: { pk: 'DISQUIET', sk: 'STATUS' } })
+  )
+  if (!Item || Item.cycle_id !== cycleId) return 0
+  return (Item.count as number) ?? 0
+}
+
+export async function incrementDisquietCount(cycleId: number): Promise<number> {
+  const current = await getDisquietCount(cycleId)
+  const next    = current + 1
+  await dynamo.send(
+    new PutCommand({
+      TableName: TABLE,
+      Item: { pk: 'DISQUIET', sk: 'STATUS', cycle_id: cycleId, count: next },
+    })
+  )
+  return next
+}
+
+export async function getDisquietMemory(): Promise<string> {
+  const { Item } = await dynamo.send(
+    new GetCommand({ TableName: TABLE, Key: { pk: 'DISQUIET', sk: 'MEMORY' } })
+  )
+  return Item ? (Item.text as string) : ''
+}
+
+export async function saveDisquietMemory(text: string): Promise<void> {
+  await dynamo.send(
+    new PutCommand({ TableName: TABLE, Item: { pk: 'DISQUIET', sk: 'MEMORY', text } })
+  )
+}
+
 // ─── Inspiration images ───────────────────────────────────────────────────────
 // pk='INSPIRATION'  sk='<timestamp>'  →  { url, analysis, filename }
 
