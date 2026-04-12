@@ -10,15 +10,11 @@ import { runDisquiet } from '@/lib/agents'
 
 export const maxDuration = 60
 
-const MAX_QUESTIONS = 5
-const MAX_WORDS     = 5
-
-function countWords(text: string): number {
-  return text.trim().split(/\s+/).filter(Boolean).length
-}
+const MAX_QUESTIONS = 10
+const MAX_CHARS     = 50
 
 export async function GET() {
-  const cycleId   = await getCurrentCycleId()
+  const cycleId = await getCurrentCycleId()
   const [messages, count] = await Promise.all([
     getDisquietMessages(cycleId),
     getDisquietCount(cycleId),
@@ -43,8 +39,8 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Question is required' }, { status: 400 })
   }
 
-  if (countWords(question) > MAX_WORDS) {
-    return Response.json({ error: `${MAX_WORDS} words maximum` }, { status: 400 })
+  if (question.length > MAX_CHARS) {
+    return Response.json({ error: `${MAX_CHARS} characters maximum` }, { status: 400 })
   }
 
   const cycleId = await getCurrentCycleId()
@@ -54,7 +50,6 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Child has fallen silent. This cycle is over.' }, { status: 429 })
   }
 
-  // Fetch history and memory in parallel, then save question
   const [history, memory] = await Promise.all([
     getDisquietMessages(cycleId),
     getDisquietMemory(),

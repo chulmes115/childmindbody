@@ -1,13 +1,7 @@
 import { cookies } from 'next/headers'
-import {
-  incrementCycleId,
-  getDisquietMessages,
-  getDisquietMemory,
-  saveDisquietMemory,
-} from '@/lib/db'
-import { summarizeDisquietConversation } from '@/lib/agents'
+import { incrementCycleId } from '@/lib/db'
 
-export const maxDuration = 60
+export const maxDuration = 30
 
 async function assertAdmin() {
   const store = await cookies()
@@ -24,25 +18,6 @@ export async function POST(request: Request) {
 
   try {
     const { newCycleId } = await request.json() as { newCycleId: number }
-    const endingCycleId = newCycleId - 1
-
-    // Summarize Disquiet conversation from the cycle that just ended
-    if (endingCycleId > 0) {
-      const disquietMessages = await getDisquietMessages(endingCycleId)
-      if (disquietMessages.length > 0) {
-        const [summary, existingMemory] = await Promise.all([
-          summarizeDisquietConversation(disquietMessages),
-          getDisquietMemory(),
-        ])
-        if (summary) {
-          const appended = existingMemory
-            ? `${existingMemory}\n\nCycle ${endingCycleId}: ${summary}`
-            : `Cycle ${endingCycleId}: ${summary}`
-          await saveDisquietMemory(appended.length > 2000 ? appended.slice(-2000) : appended)
-        }
-      }
-    }
-
     await incrementCycleId()
     return Response.json({ done: true, cycle: newCycleId })
   } catch (err) {

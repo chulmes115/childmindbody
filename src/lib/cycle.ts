@@ -11,11 +11,8 @@ import {
   getBodyMessageStatus,
   saveBodyMessageStatus,
   getInspirationImages,
-  getDisquietMessages,
-  getDisquietMemory,
-  saveDisquietMemory,
 } from './db'
-import { runChild, runMind, runBody, condenseIntake, summarizeDisquietConversation } from './agents'
+import { runChild, runMind, runBody, condenseIntake } from './agents'
 import { runBodyMessageStep } from './bodyMessage'
 
 export type CycleResult = {
@@ -113,26 +110,10 @@ export async function runCycle(): Promise<CycleResult> {
     await setMeta('mind_fail_count', current + 1)
   }
 
-  // ── Step 5: Summarize Disquiet conversation and append to memory ───────────
-  const disquietMessages = await getDisquietMessages(lastCycleId)
-  if (disquietMessages.length > 0) {
-    const [summary, existingMemory] = await Promise.all([
-      summarizeDisquietConversation(disquietMessages),
-      getDisquietMemory(),
-    ])
-    if (summary) {
-      const appended = existingMemory
-        ? `${existingMemory}\n\nCycle ${lastCycleId}: ${summary}`
-        : `Cycle ${lastCycleId}: ${summary}`
-      // Cap at ~2000 chars — drop oldest if needed
-      await saveDisquietMemory(appended.length > 2000 ? appended.slice(-2000) : appended)
-    }
-  }
-
-  // ── Step 6: Increment cycle counter ────────────────────────────────────────
+  // ── Step 5: Increment cycle counter ────────────────────────────────────────
   await incrementCycleId()
 
-  // ── Step 7: Body's Message — image generation ───────────────────────────────
+  // ── Step 6: Body's Message — image generation ───────────────────────────────
   const [bodyMsgStatus, inspirationImages] = await Promise.all([
     getBodyMessageStatus(),
     getInspirationImages(),

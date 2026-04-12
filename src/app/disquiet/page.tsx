@@ -8,13 +8,9 @@ type Message = {
   timestamp: string
 }
 
-const MAX_QUESTIONS = 5
-const MAX_WORDS     = 5
+const MAX_QUESTIONS = 10
+const MAX_CHARS     = 50
 const POLL_INTERVAL = 15_000
-
-function countWords(text: string): number {
-  return text.trim().split(/\s+/).filter(Boolean).length
-}
 
 export default function Disquiet() {
   const [messages,      setMessages]      = useState<Message[]>([])
@@ -28,9 +24,9 @@ export default function Disquiet() {
   const listRef    = useRef<HTMLDivElement>(null)
   const nearBottom = useRef(true)
 
-  const wordCount   = countWords(input)
-  const overLimit   = wordCount > MAX_WORDS
-  const canSubmit   = !submitting && !overLimit && wordCount > 0 && (questionsLeft ?? 0) > 0
+  const charCount = input.trim().length
+  const overLimit = charCount > MAX_CHARS
+  const canSubmit = !submitting && !overLimit && charCount > 0 && (questionsLeft ?? 0) > 0
 
   async function fetchState() {
     const res = await fetch('/api/disquiet')
@@ -41,16 +37,13 @@ export default function Disquiet() {
     setCycleId(data.cycleId)
   }
 
-  // Initial load
   useEffect(() => { fetchState() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Poll for updates from other visitors
   useEffect(() => {
     const id = setInterval(fetchState, POLL_INTERVAL)
     return () => clearInterval(id)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Track scroll position
   useEffect(() => {
     const el = listRef.current
     if (!el) return
@@ -61,7 +54,6 @@ export default function Disquiet() {
     return () => el.removeEventListener('scroll', handler)
   }, [])
 
-  // Auto-scroll only when near bottom
   useEffect(() => {
     if (nearBottom.current && listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight
@@ -78,7 +70,6 @@ export default function Disquiet() {
     setSubmitting(true)
     setChildTyping(true)
 
-    // Optimistically add the user message
     const optimistic: Message = { role: 'user', text: question, timestamp: new Date().toISOString() }
     setMessages((prev) => [...prev, optimistic])
     setQuestionsLeft((q) => (q !== null ? Math.max(0, q - 1) : null))
@@ -116,10 +107,7 @@ export default function Disquiet() {
   return (
     <div
       className="min-h-screen flex flex-col pt-11"
-      style={{
-        background:  '#0a0a0a',
-        fontFamily: 'var(--font-geist-mono)',
-      }}
+      style={{ background: '#0a0a0a', fontFamily: 'var(--font-geist-mono)' }}
     >
 
       {/* Header */}
@@ -151,28 +139,34 @@ export default function Disquiet() {
 
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div
-              className={`max-w-xs text-xs leading-relaxed px-4 py-3 rounded ${
-                msg.role === 'user'
-                  ? 'bg-white/8 text-white/60'
-                  : 'bg-transparent text-white/80 border border-white/12'
-              }`}
-            >
-              {msg.role === 'child' && (
-                <p className="text-white/25 text-[10px] uppercase tracking-widest mb-1.5">Child</p>
-              )}
-              <p style={{ wordBreak: 'break-word' }}>{msg.text}</p>
-            </div>
+            {msg.role === 'user' ? (
+              <div
+                className="max-w-xs text-xs leading-relaxed px-4 py-3 rounded"
+                style={{
+                  background: 'rgba(0, 56, 180, 0.25)',
+                  border:     '1px solid rgba(30, 80, 200, 0.35)',
+                  color:      'rgba(180, 210, 255, 0.85)',
+                }}
+              >
+                <p className="text-[10px] uppercase tracking-widest mb-1.5" style={{ color: 'rgba(100, 160, 255, 0.5)' }}>
+                  Human created
+                </p>
+                <p style={{ wordBreak: 'break-word' }}>{msg.text}</p>
+              </div>
+            ) : (
+              <div className="max-w-xs text-xs leading-relaxed px-4 py-3 rounded border border-white/12">
+                <p className="text-white/25 text-[10px] uppercase tracking-widest mb-1.5">AI generated</p>
+                <p className="text-white/80" style={{ wordBreak: 'break-word' }}>{msg.text}</p>
+              </div>
+            )}
           </div>
         ))}
 
         {childTyping && (
           <div className="flex justify-start">
             <div className="border border-white/12 px-4 py-3 rounded">
-              <p className="text-white/25 text-[10px] uppercase tracking-widest mb-1.5">Child</p>
-              <span className="text-white/30 text-xs">
-                <span style={{ animation: 'pulse 1.4s ease-in-out infinite' }}>…</span>
-              </span>
+              <p className="text-white/25 text-[10px] uppercase tracking-widest mb-1.5">AI generated</p>
+              <span className="text-white/30 text-xs">…</span>
             </div>
           </div>
         )}
@@ -191,7 +185,8 @@ export default function Disquiet() {
                   type="text"
                   value={input}
                   onChange={(e) => { setInput(e.target.value); setError('') }}
-                  placeholder="five words"
+                  placeholder="your question"
+                  maxLength={MAX_CHARS + 20}
                   disabled={submitting}
                   className="w-full bg-transparent border border-white/15 text-white/70 text-xs px-3 py-2 rounded outline-none focus:border-white/30 placeholder:text-white/20 disabled:opacity-40"
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(e) } }}
@@ -201,7 +196,7 @@ export default function Disquiet() {
                     overLimit ? 'text-red-400/70' : 'text-white/20'
                   }`}
                 >
-                  {wordCount}/{MAX_WORDS}
+                  {charCount}/{MAX_CHARS}
                 </span>
               </div>
               <button

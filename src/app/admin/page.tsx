@@ -1,8 +1,9 @@
 import { cookies } from 'next/headers'
-import { getMeta, getCurrentCycleId, getCycleRecord, getInspirationImages } from '@/lib/db'
+import { getMeta, getCurrentCycleId, getCycleRecord, getInspirationImages, getDisquietMemory, getDisquietCount } from '@/lib/db'
 import { login, logout, seedBodyCode } from './actions'
 import DecisionButtons from './DecisionButtons'
 import TriggerCycle from './TriggerCycle'
+import CondenseDisquiet from './CondenseDisquiet'
 import InspirationUpload from '@/app/bodys-message/InspirationUpload'
 
 export const dynamic = 'force-dynamic'
@@ -35,12 +36,14 @@ export default async function AdminPage() {
   }
 
   // ── Fetch current state ─────────────────────────────────────────────────────
-  const [cycleId, consecutiveFails, codeFailCount, mindFailCount, inspirationImages] = await Promise.all([
+  const [cycleId, consecutiveFails, codeFailCount, mindFailCount, inspirationImages, disquietMemory, disquietCount] = await Promise.all([
     getCurrentCycleId(),
     getMeta('consecutive_fails'),
     getMeta('code_fail_count'),
     getMeta('mind_fail_count'),
     getInspirationImages(),
+    getDisquietMemory(),
+    getCurrentCycleId().then((id) => getDisquietCount(id)),
   ])
 
   const currentRecord = cycleId > 0 ? await getCycleRecord(cycleId) : null
@@ -180,6 +183,27 @@ export default async function AdminPage() {
             </div>
           </section>
         )}
+
+        {/* Disquiet memory */}
+        <section>
+          <div className="flex items-baseline justify-between mb-6">
+            <h2 className="text-xs tracking-widest uppercase text-white/30">Child&apos;s Disquiet</h2>
+            <div className="flex items-center gap-4">
+              <span className="text-white/20 text-xs">{disquietCount} / 10 questions used this cycle</span>
+              <CondenseDisquiet cycleId={cycleId} />
+            </div>
+          </div>
+          <p className="text-white/20 text-xs mb-4">
+            Accumulated memory from past cycles. Click &ldquo;condense memory&rdquo; to summarize and append the current cycle&apos;s conversation before triggering a new cycle.
+          </p>
+          {disquietMemory ? (
+            <pre className="text-white/40 text-xs leading-relaxed whitespace-pre-wrap border border-white/10 p-5 rounded">
+              {disquietMemory}
+            </pre>
+          ) : (
+            <p className="text-white/20 text-xs italic">No memory yet.</p>
+          )}
+        </section>
 
         {/* Inspiration — Body's message reference art */}
         <section>
