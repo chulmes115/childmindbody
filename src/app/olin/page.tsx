@@ -34,13 +34,15 @@ function getMsgPos(index: number): { x: number; y: number } {
   return { x: 10 + col * cellW + jx, y: 14 + row * cellH + jy }
 }
 
-// ── Watermark triangle positions (% of viewport) ──────────────────────────────
-// Equilateral triangle centered at ~(50%, 52%), circumradius ~28%
+// ── Watermark triangle positions ──────────────────────────────────────────────
+// True equilateral triangle centered at (50%, 50%), circumradius 18vmin.
+// All vertices use translateX(-50%) so left/calc() is the image's horizontal center.
+// R = 18vmin  →  vertical offset = R/2 = 9vmin  →  horizontal offset = R*sin(60°) = 15.6vmin
 
 const WM_POSITIONS = [
-  { top: '20%', left: '50%', transform: 'translateX(-50%)' },   // top
-  { top: '64%', left: '23%', transform: 'none'               },   // bottom-left
-  { top: '64%', left: '74%', transform: 'none'               },   // bottom-right
+  { top: 'calc(50% - 18vmin)',  left: '50%',                    transform: 'translateX(-50%)' }, // top
+  { top: 'calc(50% + 9vmin)',   left: 'calc(50% - 15.6vmin)',  transform: 'translateX(-50%)' }, // bottom-left
+  { top: 'calc(50% + 9vmin)',   left: 'calc(50% + 15.6vmin)',  transform: 'translateX(-50%)' }, // bottom-right
 ]
 
 export default function Olin() {
@@ -114,7 +116,27 @@ export default function Olin() {
       }}
     >
 
-      {/* Growing crimson circle */}
+      {/* Solid crimson fill — grows slightly slower than the ring */}
+      <div
+        style={{
+          position:      'absolute',
+          top:           '50%',
+          left:          '50%',
+          transform:     'translate(-50%, -50%)',
+          width:         '4px',
+          height:        '4px',
+          borderRadius:  '50%',
+          background:    'rgba(148, 0, 22, 0.22)',
+          pointerEvents: 'none',
+          zIndex:        1,
+          animationName:           'olin-circle',
+          animationDuration:       '1380s',
+          animationTimingFunction: 'linear',
+          animationFillMode:       'forwards',
+        } as React.CSSProperties}
+      />
+
+      {/* Growing crimson ring — 1200s */}
       <div
         style={{
           position:     'absolute',
@@ -184,8 +206,8 @@ export default function Olin() {
               top:       WM_POSITIONS[i].top,
               left:      WM_POSITIONS[i].left,
               transform: WM_POSITIONS[i].transform,
-              width:     'clamp(120px, 14vw, 200px)',
-              height:    'clamp(120px, 14vw, 200px)',
+              width:     '12vmin',
+              height:    '12vmin',
               objectFit: 'contain',
               opacity:   0.13,
               zIndex:    3,
