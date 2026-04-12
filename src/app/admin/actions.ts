@@ -2,6 +2,7 @@
 
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { getMeta, setMeta, saveCycleRecord, saveBodyCode } from '@/lib/db'
 import { runCycle } from '@/lib/cycle'
 
@@ -138,4 +139,5 @@ const SEED_BODY_HTML = `<!DOCTYPE html>
 export async function seedBodyCode() {
   await assertAdmin()
   await saveBodyCode(SEED_BODY_HTML)
+  revalidatePath('/admin')
 }

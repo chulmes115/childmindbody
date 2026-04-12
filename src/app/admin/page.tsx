@@ -84,7 +84,7 @@ export default async function AdminPage() {
               <form action={seedBodyCode}>
                 <button
                   type="submit"
-                  className="text-xs text-white/25 border border-white/10 px-3 py-1.5 rounded hover:text-white/45 hover:border-white/25 transition-colors"
+                  className="text-xs text-white/50 border border-white/20 px-3 py-1.5 rounded hover:text-white/75 hover:border-white/40 transition-colors"
                 >
                   seed body
                 </button>

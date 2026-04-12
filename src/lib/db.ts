@@ -200,6 +200,29 @@ export async function saveBodyMessageStatus(status: BodyMessageStatus): Promise<
   )
 }
 
+// ─── Gallery upload counter (per-cycle cap) ───────────────────────────────────
+// pk='GALLERY_CYCLE'  sk='STATUS'  →  { cycle_id, count }
+
+export async function getGalleryUploadCount(cycleId: number): Promise<number> {
+  const { Item } = await dynamo.send(
+    new GetCommand({ TableName: TABLE, Key: { pk: 'GALLERY_CYCLE', sk: 'STATUS' } })
+  )
+  if (!Item || Item.cycle_id !== cycleId) return 0
+  return (Item.count as number) ?? 0
+}
+
+export async function incrementGalleryUploadCount(cycleId: number): Promise<number> {
+  const current = await getGalleryUploadCount(cycleId)
+  const next = current + 1
+  await dynamo.send(
+    new PutCommand({
+      TableName: TABLE,
+      Item: { pk: 'GALLERY_CYCLE', sk: 'STATUS', cycle_id: cycleId, count: next },
+    })
+  )
+  return next
+}
+
 // ─── Inspiration images ───────────────────────────────────────────────────────
 // pk='INSPIRATION'  sk='<timestamp>'  →  { url, analysis, filename }
 
