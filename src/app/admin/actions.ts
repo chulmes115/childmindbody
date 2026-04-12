@@ -121,7 +121,7 @@ const SEED_BODY_HTML = `<!DOCTYPE html>
     btn.disabled = true;
     btn.textContent = 'Submitting…';
     try {
-      var res = await fetch(window.location.origin + '/api/intake', {
+      var res = await fetch(window.parent.location.origin + '/api/intake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ response: val })

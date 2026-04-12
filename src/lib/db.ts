@@ -223,6 +223,22 @@ export async function incrementGalleryUploadCount(cycleId: number): Promise<numb
   return next
 }
 
+// ─── Gallery compliment ───────────────────────────────────────────────────────
+// pk='GALLERY'  sk='COMPLIMENT'  →  { text }
+
+export async function getGalleryCompliment(): Promise<string | null> {
+  const { Item } = await dynamo.send(
+    new GetCommand({ TableName: TABLE, Key: { pk: 'GALLERY', sk: 'COMPLIMENT' } })
+  )
+  return Item ? (Item.text as string) : null
+}
+
+export async function saveGalleryCompliment(text: string): Promise<void> {
+  await dynamo.send(
+    new PutCommand({ TableName: TABLE, Item: { pk: 'GALLERY', sk: 'COMPLIMENT', text } })
+  )
+}
+
 // ─── Inspiration images ───────────────────────────────────────────────────────
 // pk='INSPIRATION'  sk='<timestamp>'  →  { url, analysis, filename }
 

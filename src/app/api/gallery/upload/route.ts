@@ -3,7 +3,7 @@ import { PutObjectCommand } from '@aws-sdk/client-s3'
 import Anthropic from '@anthropic-ai/sdk'
 import sharp from 'sharp'
 import { s3, BUCKET } from '@/lib/s3'
-import { getCurrentCycleId, getGalleryUploadCount, incrementGalleryUploadCount } from '@/lib/db'
+import { getCurrentCycleId, getGalleryUploadCount, incrementGalleryUploadCount, saveGalleryCompliment } from '@/lib/db'
 
 const MAX_PER_CYCLE   = 10
 const COOLDOWN_MS     = 2 * 60 * 1000
@@ -118,7 +118,10 @@ export async function POST(request: Request) {
       generateCompliment(buffer, file.type),
     ])
 
-    await incrementGalleryUploadCount(cycleId)
+    await Promise.all([
+      incrementGalleryUploadCount(cycleId),
+      saveGalleryCompliment(compliment),
+    ])
 
     const imageUrl = `https://${BUCKET}.s3.${region}.amazonaws.com/${key}`
     const res = NextResponse.json({ ok: true, url: imageUrl, compliment })

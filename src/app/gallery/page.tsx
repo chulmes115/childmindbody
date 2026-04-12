@@ -23,27 +23,25 @@ function rand(min: number, max: number) {
 const CHAR_DELAY = 38
 
 export default function Gallery() {
-  const [images,    setImages]    = useState<FloatingImage[]>([])
-  const [center,    setCenter]    = useState({ x: 0, y: 0 })
+  const [images,      setImages]      = useState<FloatingImage[]>([])
+  const [center,      setCenter]      = useState({ x: 0, y: 0 })
   const [arrivingUrl, setArrivingUrl] = useState<string | null>(null)
 
-  // Compliment typewriter
+  // Persistent compliment — typewriters in, then stays until replaced
   const [compliment,      setCompliment]      = useState<string | null>(null)
   const [complimentCount, setComplimentCount] = useState(0)
-  const [complimentFade,  setComplimentFade]  = useState(false)
 
   const [uploading,   setUploading]   = useState(false)
   const [uploadError, setUploadError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // ── Load images ────────────────────────────────────────────────────────────
+  // ── Load images + stored compliment ───────────────────────────────────────
 
   async function loadImages(newUrl?: string) {
     const res = await fetch('/api/gallery/images')
     if (!res.ok) return
     const data = await res.json()
     const urls: string[] = data.images ?? []
-    if (urls.length === 0) { setImages([]); return }
 
     const vw = window.innerWidth
     const vh = window.innerHeight
@@ -51,54 +49,51 @@ export default function Gallery() {
     const cy = vh / 2
     setCenter({ x: cx, y: cy })
 
-    const n = urls.length
-    const radius = Math.min(vw, vh) * 0.40
-
-    setImages(
-      urls.map((url, i) => {
-        const angle = (2 * Math.PI / n) * i + rand(-0.25, 0.25)
-        const r     = radius + rand(-60, 60)
-        const size  = rand(100, 160)
-        return {
-          url,
-          x:        cx + r * Math.cos(angle) - size / 2,
-          y:        cy + r * Math.sin(angle) - size / 2,
-          size,
-          initRot:  rand(-20, 20),
-          dx:       `${rand(-50, 50).toFixed(1)}px`,
-          dy:       `${rand(-50, 50).toFixed(1)}px`,
-          dr:       `${rand(-16, 16).toFixed(1)}deg`,
-          duration: rand(14, 28),
-          delay:    newUrl && url === newUrl ? 1.4 : rand(-30, 0),
-          zIndex:   Math.floor(rand(0, 10)),
-        }
-      })
-    )
+    if (urls.length > 0) {
+      const n = urls.length
+      const radius = Math.min(vw, vh) * 0.40
+      setImages(
+        urls.map((url, i) => {
+          const angle = (2 * Math.PI / n) * i + rand(-0.25, 0.25)
+          const r     = radius + rand(-60, 60)
+          const size  = rand(100, 160)
+          return {
+            url,
+            x:        cx + r * Math.cos(angle) - size / 2,
+            y:        cy + r * Math.sin(angle) - size / 2,
+            size,
+            initRot:  rand(-20, 20),
+            dx:       `${rand(-50, 50).toFixed(1)}px`,
+            dy:       `${rand(-50, 50).toFixed(1)}px`,
+            dr:       `${rand(-16, 16).toFixed(1)}deg`,
+            duration: rand(14, 28),
+            delay:    newUrl && url === newUrl ? 1.4 : rand(-30, 0),
+            zIndex:   Math.floor(rand(0, 10)),
+          }
+        })
+      )
+    } else {
+      setImages([])
+    }
 
     if (newUrl) {
       setArrivingUrl(newUrl)
       setTimeout(() => setArrivingUrl(null), 1600)
     }
+
+    // Show stored compliment on page load (only if not already showing a newer one)
+    if (!newUrl && data.compliment) {
+      setCompliment(data.compliment)
+      setComplimentCount(0)
+    }
   }
 
   useEffect(() => { loadImages() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Compliment typewriter ──────────────────────────────────────────────────
+  // ── Compliment typewriter — types in, then stays ───────────────────────────
 
   useEffect(() => {
-    if (!compliment) return
-    if (complimentCount >= compliment.length) {
-      // Fully typed — wait 4s then fade out
-      const t = setTimeout(() => {
-        setComplimentFade(true)
-        setTimeout(() => {
-          setCompliment(null)
-          setComplimentCount(0)
-          setComplimentFade(false)
-        }, 900)
-      }, 4000)
-      return () => clearTimeout(t)
-    }
+    if (!compliment || complimentCount >= compliment.length) return
     const t = setTimeout(() => setComplimentCount((c) => c + 1), CHAR_DELAY)
     return () => clearTimeout(t)
   }, [compliment, complimentCount])
@@ -116,18 +111,24 @@ export default function Gallery() {
     const data = await res.json()
 
     if (data.ok) {
+      if (data.compliment) {
+        // Clear old compliment and start new one
+        setCompliment(null)
+        setComplimentCount(0)
+        setTimeout(() => {
+          setCompliment(data.compliment)
+          setComplimentCount(0)
+        }, 1200) // wait for placement animation to start
+      }
       await loadImages(data.url)
       if (fileRef.current) fileRef.current.value = ''
-      if (data.compliment) {
-        setCompliment(data.compliment)
-        setComplimentCount(0)
-        setComplimentFade(false)
-      }
     } else {
       setUploadError(data.error ?? 'Upload failed')
     }
     setUploading(false)
   }
+
+  const isDoneTyping = compliment !== null && complimentCount >= compliment.length
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -145,9 +146,6 @@ export default function Gallery() {
             key={img.url}
             src={img.url}
             alt=""
-            onAnimationEnd={() => {
-              if (isArriving) setArrivingUrl(null)
-            }}
             style={{
               position:  'absolute',
               left:      img.x,
@@ -157,26 +155,26 @@ export default function Gallery() {
               objectFit: 'contain',
               zIndex:    img.zIndex,
               ...(isArriving ? {
-                '--from-x':               `${center.x - img.x - img.size / 2}px`,
-                '--from-y':               `${center.y - img.y - img.size / 2}px`,
-                animationName:            'place',
-                animationDuration:        '1.4s',
-                animationTimingFunction:  'cubic-bezier(0.34, 1.56, 0.64, 1)',
-                animationFillMode:        'both',
-                animationIterationCount:  '1',
-                opacity:                  0.78,
+                '--from-x':              `${center.x - img.x - img.size / 2}px`,
+                '--from-y':              `${center.y - img.y - img.size / 2}px`,
+                animationName:           'place',
+                animationDuration:       '1.4s',
+                animationTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                animationFillMode:       'both',
+                animationIterationCount: '1',
+                opacity:                 0.78,
               } : {
-                '--init-rot':             `${img.initRot}deg`,
-                '--dx':                   img.dx,
-                '--dy':                   img.dy,
-                '--dr':                   img.dr,
-                animationName:            'drift',
-                animationDuration:        `${img.duration}s`,
-                animationDelay:           `${img.delay}s`,
-                animationTimingFunction:  'ease-in-out',
-                animationIterationCount:  'infinite',
-                animationDirection:       'alternate',
-                opacity:                  0.78,
+                '--init-rot':            `${img.initRot}deg`,
+                '--dx':                  img.dx,
+                '--dy':                  img.dy,
+                '--dr':                  img.dr,
+                animationName:           'drift',
+                animationDuration:       `${img.duration}s`,
+                animationDelay:          `${img.delay}s`,
+                animationTimingFunction: 'ease-in-out',
+                animationIterationCount: 'infinite',
+                animationDirection:      'alternate',
+                opacity:                 0.78,
               }),
             } as React.CSSProperties}
           />
@@ -194,34 +192,35 @@ export default function Gallery() {
         <p className="text-white/50 text-xs mt-1 tracking-wider">— Human created, Olin</p>
       </div>
 
-      {/* AI compliment typewriter */}
+      {/* AI compliment — left side, persists */}
       {compliment && (
         <div
-          className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none"
+          className="fixed z-20 pointer-events-none"
           style={{
-            opacity:    complimentFade ? 0 : 1,
-            transition: complimentFade ? 'opacity 0.9s ease' : 'none',
+            left:      '24px',
+            top:       '50%',
+            transform: 'translateY(-50%)',
+            width:     '150px',
+            fontFamily: 'var(--font-geist-sans)',
           }}
         >
           <p
-            className="text-white text-sm leading-relaxed text-center max-w-xs px-6"
-            style={{
-              fontFamily: 'var(--font-geist-sans)',
-              textShadow: '0 1px 24px rgba(0,10,80,0.9), 0 0 48px rgba(0,10,80,0.6)',
-            }}
+            className="text-white/75 text-xs leading-relaxed"
+            style={{ textShadow: '0 1px 12px rgba(0,10,80,0.7)' }}
           >
             {compliment.slice(0, complimentCount)}
-            <span
-              style={{
-                display:         'inline-block',
-                width:           '1.5px',
-                height:          '0.9em',
-                background:      'rgba(255,255,255,0.7)',
-                marginLeft:      '2px',
-                verticalAlign:   'text-bottom',
-                opacity:         complimentCount < compliment.length ? 1 : 0,
-              }}
-            />
+            {!isDoneTyping && (
+              <span
+                style={{
+                  display:       'inline-block',
+                  width:         '1.5px',
+                  height:        '0.85em',
+                  background:    'rgba(255,255,255,0.6)',
+                  marginLeft:    '1px',
+                  verticalAlign: 'text-bottom',
+                }}
+              />
+            )}
           </p>
         </div>
       )}

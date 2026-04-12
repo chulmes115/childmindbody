@@ -71,7 +71,10 @@ export default async function BodysMessage() {
               {/* Word window — past chunk (dim) + current chunk (vivid) */}
               {currentChunk && (
                 <div className="pt-2">
-                  <p className="text-white/30 text-xs uppercase tracking-widest mb-3">words it&apos;s reading</p>
+                  <div className="flex items-baseline justify-between mb-3">
+                    <p className="text-white/30 text-xs uppercase tracking-widest">words it&apos;s reading</p>
+                    <p className="text-[#7dd3fc]/60 text-xs">— Human created, Olin</p>
+                  </div>
                   <p className="text-sm leading-relaxed">
                     {pastChunk && (
                       <span className="text-[#7dd3fc]/30">{pastChunk}{' '}</span>

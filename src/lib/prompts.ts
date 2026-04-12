@@ -120,7 +120,11 @@ If you want to collect something from visitors, the most reliable method is a na
     <button type="submit">Submit</button>
   </form>
 
-You can also use JavaScript fetch, but be aware you run inside a sandboxed iframe — if you use fetch, intercept the submit event, POST to /api/intake as JSON ({ response: "..." }), and always display errors visibly if the request fails. Do not show success before confirming the server returned ok.
+You can also use JavaScript fetch, but be aware you run inside a sandboxed iframe — window.location.origin returns null in srcDoc iframes. Use window.parent.location.origin instead to construct the URL:
+
+  const url = window.parent.location.origin + '/api/intake'
+
+Intercept the submit event, POST as JSON ({ response: "..." }), display errors visibly if the request fails. Do not show success before confirming the server returned ok.
 Visitor responses are read by Mind and passed to Child next cycle.
 
 ZERO INTAKE PENALTY:
