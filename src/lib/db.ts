@@ -314,6 +314,65 @@ export async function saveDisquietMemory(text: string): Promise<void> {
   )
 }
 
+// ─── Olin messages (journal entries shown on /olin) ──────────────────────────
+// pk='OLIN_MSG'  sk='<ISO timestamp>'  → { text }
+
+export type OlinMessage = {
+  text:      string
+  timestamp: string
+}
+
+export async function getOlinMessages(): Promise<OlinMessage[]> {
+  const { Items } = await dynamo.send(
+    new QueryCommand({
+      TableName: TABLE,
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': 'OLIN_MSG' },
+      ScanIndexForward: true,
+    })
+  )
+  return (Items ?? []).map((item) => ({
+    text:      item.text      as string,
+    timestamp: item.sk        as string,
+  }))
+}
+
+export async function saveOlinMessage(text: string): Promise<void> {
+  const ts = new Date().toISOString()
+  await dynamo.send(
+    new PutCommand({ TableName: TABLE, Item: { pk: 'OLIN_MSG', sk: ts, text } })
+  )
+}
+
+export async function deleteOlinMessage(timestamp: string): Promise<void> {
+  const { DeleteCommand } = await import('@aws-sdk/lib-dynamodb')
+  await dynamo.send(
+    new DeleteCommand({ TableName: TABLE, Key: { pk: 'OLIN_MSG', sk: timestamp } })
+  )
+}
+
+// ─── Olin watermarks (3 slots for /olin triangle formation) ──────────────────
+// pk='OLIN_WM'  sk='1'|'2'|'3'  → { url }
+
+export async function getOlinWatermarks(): Promise<(string | null)[]> {
+  const { Items } = await dynamo.send(
+    new QueryCommand({
+      TableName: TABLE,
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': 'OLIN_WM' },
+    })
+  )
+  const map: Record<string, string> = {}
+  for (const item of Items ?? []) map[item.sk as string] = item.url as string
+  return [map['1'] ?? null, map['2'] ?? null, map['3'] ?? null]
+}
+
+export async function saveOlinWatermark(slot: 1 | 2 | 3, url: string): Promise<void> {
+  await dynamo.send(
+    new PutCommand({ TableName: TABLE, Item: { pk: 'OLIN_WM', sk: String(slot), url } })
+  )
+}
+
 // ─── Inspiration images ───────────────────────────────────────────────────────
 // pk='INSPIRATION'  sk='<timestamp>'  →  { url, analysis, filename }
 

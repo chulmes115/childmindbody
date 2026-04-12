@@ -40,6 +40,15 @@ body {
   50%       { opacity: 0; }
 }
 
+@keyframes olin-circle {
+  from { width: 4px; height: 4px }
+  to   { width: 130vmax; height: 130vmax }
+}
+
+@keyframes draw-streak {
+  to { stroke-dashoffset: 0 }
+}
+
 .scrollbar-none {
   scrollbar-width: none;
 }

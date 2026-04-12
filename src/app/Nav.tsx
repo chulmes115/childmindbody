@@ -10,6 +10,7 @@ const TABS = [
   { href: '/read',          label: "Mind's ruminations" },
   { href: '/bodys-message', label: "Body's dream"       },
   { href: '/disquiet',      label: "Child's disquiet"   },
+  { href: '/olin',          label: 'Olin'                },
 ]
 
 export default function Nav() {

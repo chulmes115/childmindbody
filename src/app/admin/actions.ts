@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { getMeta, setMeta, saveCycleRecord, saveBodyCode } from '@/lib/db'
+import { getMeta, setMeta, saveCycleRecord, saveBodyCode, saveOlinMessage, deleteOlinMessage as dbDeleteOlinMessage } from '@/lib/db'
 import { runCycle } from '@/lib/cycle'
 
 async function assertAdmin() {
@@ -139,5 +139,19 @@ const SEED_BODY_HTML = `<!DOCTYPE html>
 export async function seedBodyCode() {
   await assertAdmin()
   await saveBodyCode(SEED_BODY_HTML)
+  revalidatePath('/admin')
+}
+
+export async function addOlinMessage(formData: FormData) {
+  await assertAdmin()
+  const text = (formData.get('text') as string ?? '').trim()
+  if (!text) return
+  await saveOlinMessage(text)
+  revalidatePath('/admin')
+}
+
+export async function removeOlinMessage(timestamp: string) {
+  await assertAdmin()
+  await dbDeleteOlinMessage(timestamp)
   revalidatePath('/admin')
 }

@@ -1,9 +1,10 @@
 import { cookies } from 'next/headers'
-import { getMeta, getCurrentCycleId, getCycleRecord, getInspirationImages, getDisquietMemory, getDisquietCount } from '@/lib/db'
+import { getMeta, getCurrentCycleId, getCycleRecord, getInspirationImages, getDisquietMemory, getDisquietCount, getOlinMessages, getOlinWatermarks } from '@/lib/db'
 import { login, logout, seedBodyCode } from './actions'
 import DecisionButtons from './DecisionButtons'
 import TriggerCycle from './TriggerCycle'
 import CondenseDisquiet from './CondenseDisquiet'
+import OlinAdmin from './OlinAdmin'
 import InspirationUpload from '@/app/bodys-message/InspirationUpload'
 
 export const dynamic = 'force-dynamic'
@@ -36,7 +37,7 @@ export default async function AdminPage() {
   }
 
   // ── Fetch current state ─────────────────────────────────────────────────────
-  const [cycleId, consecutiveFails, codeFailCount, mindFailCount, inspirationImages, disquietMemory, disquietCount] = await Promise.all([
+  const [cycleId, consecutiveFails, codeFailCount, mindFailCount, inspirationImages, disquietMemory, disquietCount, olinMessages, olinWatermarks] = await Promise.all([
     getCurrentCycleId(),
     getMeta('consecutive_fails'),
     getMeta('code_fail_count'),
@@ -44,6 +45,8 @@ export default async function AdminPage() {
     getInspirationImages(),
     getDisquietMemory(),
     getCurrentCycleId().then((id) => getDisquietCount(id)),
+    getOlinMessages(),
+    getOlinWatermarks(),
   ])
 
   const currentRecord = cycleId > 0 ? await getCycleRecord(cycleId) : null
@@ -203,6 +206,12 @@ export default async function AdminPage() {
           ) : (
             <p className="text-white/20 text-xs italic">No memory yet.</p>
           )}
+        </section>
+
+        {/* Olin — journal messages + watermarks */}
+        <section>
+          <h2 className="text-xs tracking-widest uppercase text-white/30 mb-6">Olin</h2>
+          <OlinAdmin initialMessages={olinMessages} initialWatermarks={olinWatermarks} />
         </section>
 
         {/* Inspiration — Body's message reference art */}
