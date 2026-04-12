@@ -21,7 +21,7 @@ export type CycleResult = {
   isFirstRun: boolean
   childResolution: string
   bodyUpdated: boolean
-  mindRecommendation: 'pass' | 'fail'
+  mindRecommendation: 'pass' | 'fail' | null
 }
 
 export async function runCycle(): Promise<CycleResult> {
