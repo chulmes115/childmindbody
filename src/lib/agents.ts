@@ -87,7 +87,7 @@ ${ctx.bodyCurrentCode || '[Nothing is displayed yet.]'}`
 export async function runMind(
   childResolution: string,
   intakeData: string
-): Promise<{ analysis: string; recommendation: 'pass' | 'fail' }> {
+): Promise<{ analysis: string; recommendation: 'pass' | 'fail' | null }> {
   const userMessage = `\
 CHILD'S RESOLUTION:
 ${childResolution || '[No resolution — first cycle.]'}
@@ -106,14 +106,16 @@ ${intakeData || '[No responses.]'}`
 
   const raw = extractText(msg)
 
-  // Extract recommendation from final line
-  const lines = raw.split('\n')
-  const lastLine = lines[lines.length - 1].trim()
-  const recommendation =
-    lastLine === 'RECOMMENDATION: pass' ? 'pass' : 'fail'
+  // Tolerant extraction — strips markdown bold, handles whitespace/case variations
+  const match = raw.match(/RECOMMENDATION:\s*(pass|fail)/i)
+  const recommendation: 'pass' | 'fail' | null = match
+    ? (match[1].toLowerCase() as 'pass' | 'fail')
+    : null
 
-  const analysis = lines
-    .slice(0, lastLine.startsWith('RECOMMENDATION:') ? -1 : undefined)
+  // Remove the recommendation line from the analysis text
+  const analysis = raw
+    .split('\n')
+    .filter((line) => !/RECOMMENDATION:\s*(pass|fail)/i.test(line))
     .join('\n')
     .trim()
 

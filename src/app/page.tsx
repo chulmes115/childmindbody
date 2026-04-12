@@ -32,10 +32,10 @@ export default function Home() {
         {/* Journal entry */}
         <section>
           <div className="flex items-baseline justify-between mb-6">
-            <p className="text-white/45 text-xs uppercase tracking-widest">Journal</p>
-            <p className="text-white/35 text-xs">— Human created, Olin</p>
+            <p className="text-sky-400/80 text-xs uppercase tracking-widest">Journal</p>
+            <p className="text-sky-400/60 text-xs">— Human created, Olin</p>
           </div>
-          <blockquote className="text-white/85 text-sm leading-relaxed whitespace-pre-wrap">
+          <blockquote className="text-sky-300 text-sm leading-relaxed whitespace-pre-wrap">
             {JOURNAL}
           </blockquote>
         </section>
@@ -43,16 +43,16 @@ export default function Home() {
         {/* Beliefs */}
         <section>
           <div className="flex items-baseline justify-between mb-6">
-            <p className="text-white/45 text-xs uppercase tracking-widest">Beliefs</p>
-            <p className="text-white/35 text-xs">— Human created, Olin</p>
+            <p className="text-sky-400/80 text-xs uppercase tracking-widest">Beliefs</p>
+            <p className="text-sky-400/60 text-xs">— Human created, Olin</p>
           </div>
           <ol className="space-y-3">
             {BELIEFS.map((b, i) => (
               <li key={i} className="flex gap-4">
-                <span className="text-white/35 text-xs pt-0.5 shrink-0 tabular-nums">
+                <span className="text-sky-400/50 text-xs pt-0.5 shrink-0 tabular-nums">
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                <span className="text-white/80 text-sm">{b}</span>
+                <span className="text-sky-300 text-sm">{b}</span>
               </li>
             ))}
           </ol>

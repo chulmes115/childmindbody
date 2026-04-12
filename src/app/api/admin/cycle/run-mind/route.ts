@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     await saveCycleRecord({
       id:               newCycleId,
       mind_analysis:    analysis,
-      mind_rec:         recommendation,
+      ...(recommendation !== null ? { mind_rec: recommendation } : {}),
       intake_condensed: condensed || undefined,
     })
 

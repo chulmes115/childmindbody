@@ -77,11 +77,11 @@ export default function Home() {
       {/* The Truth */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="px-10 pt-10 pb-5 shrink-0">
-          <p className="text-white/30 text-xs uppercase tracking-widest">The Truth</p>
-          <p className="text-white/18 text-xs mt-1">— Human created</p>
+          <p className="text-sky-400/80 text-xs uppercase tracking-widest">The Truth</p>
+          <p className="text-sky-400/60 text-xs mt-1">— Human created</p>
         </div>
         <div ref={truthRef} className="flex-1 overflow-y-auto px-10 pb-10 scrollbar-none">
-          <p className="text-white/75 text-sm leading-relaxed whitespace-pre-wrap">
+          <p className="text-sky-300 text-sm leading-relaxed whitespace-pre-wrap">
             {truth.displayed}<Cursor done={truth.done} />
           </p>
         </div>

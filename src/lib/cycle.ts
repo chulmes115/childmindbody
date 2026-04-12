@@ -100,7 +100,7 @@ export async function runCycle(): Promise<CycleResult> {
   await saveCycleRecord({
     id: newCycleId,
     mind_analysis: mindResult.analysis,
-    mind_rec: mindResult.recommendation,
+    ...(mindResult.recommendation !== null ? { mind_rec: mindResult.recommendation } : {}),
     intake_condensed: condensed || undefined,
   })
 

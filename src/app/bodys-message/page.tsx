@@ -71,9 +71,9 @@ export default async function BodysMessage() {
         {/* Human Created — Inspiration */}
         <section>
           <div className="flex items-baseline justify-between mb-6">
-            <p className="text-white/45 text-xs uppercase tracking-widest">Inspiration</p>
+            <p className="text-sky-400/80 text-xs uppercase tracking-widest">Inspiration</p>
             <div className="flex flex-col items-end gap-1">
-              <p className="text-white/35 text-xs">— Images human created, Olin</p>
+              <p className="text-sky-400/60 text-xs">— Images human created, Olin</p>
               <p className="text-white/35 text-xs">— Descriptions AI generated</p>
             </div>
           </div>
