@@ -38,22 +38,22 @@ export default function Gallery() {
     const vh = window.innerHeight
     const cx = vw / 2
     const cy = vh / 2
-    const radius = Math.min(vw, vh) * 0.32
+    const radius = Math.min(vw, vh) * 0.40
 
     setImages(
       urls.map((url, i) => {
         const angle = (2 * Math.PI / n) * i + rand(-0.25, 0.25)
         const r = radius + rand(-60, 60)
-        const size = rand(120, 190)
+        const size = rand(100, 160)
         return {
           url,
           x: cx + r * Math.cos(angle) - size / 2,
           y: cy + r * Math.sin(angle) - size / 2,
           size,
           initRot: rand(-20, 20),
-          dx: `${rand(-35, 35).toFixed(1)}px`,
-          dy: `${rand(-35, 35).toFixed(1)}px`,
-          dr: `${rand(-12, 12).toFixed(1)}deg`,
+          dx: `${rand(-50, 50).toFixed(1)}px`,
+          dy: `${rand(-50, 50).toFixed(1)}px`,
+          dr: `${rand(-16, 16).toFixed(1)}deg`,
           duration: rand(14, 28),
           delay: rand(-30, 0),
           zIndex: Math.floor(rand(0, 10)),
@@ -106,6 +106,7 @@ export default function Gallery() {
             width: img.size,
             height: img.size,
             objectFit: 'contain',
+            opacity: 0.78,
             zIndex: img.zIndex,
             '--init-rot': `${img.initRot}deg`,
             '--dx': img.dx,
@@ -120,6 +121,17 @@ export default function Gallery() {
           } as React.CSSProperties}
         />
       ))}
+
+      {/* Center title */}
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none"
+        style={{ fontFamily: 'var(--font-geist-sans)' }}
+      >
+        <p className="text-white text-lg tracking-widest uppercase" style={{ letterSpacing: '0.2em' }}>
+          ode to the blue sky
+        </p>
+        <p className="text-white/50 text-xs mt-1 tracking-wider">— Human created, Olin</p>
+      </div>
 
       {images.length === 0 && (
         <p className="absolute inset-0 flex items-center justify-center text-white/40 text-sm">
