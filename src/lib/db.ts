@@ -11,6 +11,7 @@ import { dynamo, TABLE } from './dynamodb'
 export type MetaKey =
   | 'consecutive_fails'
   | 'code_fail_count'
+  | 'mind_fail_count'
   | 'codebase_resets'
   | 'start_date'
 

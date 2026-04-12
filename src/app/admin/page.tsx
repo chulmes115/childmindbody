@@ -35,10 +35,11 @@ export default async function AdminPage() {
   }
 
   // ── Fetch current state ─────────────────────────────────────────────────────
-  const [cycleId, consecutiveFails, codeFailCount, inspirationImages] = await Promise.all([
+  const [cycleId, consecutiveFails, codeFailCount, mindFailCount, inspirationImages] = await Promise.all([
     getCurrentCycleId(),
     getMeta('consecutive_fails'),
     getMeta('code_fail_count'),
+    getMeta('mind_fail_count'),
     getInspirationImages(),
   ])
 
@@ -51,8 +52,9 @@ export default async function AdminPage() {
   ).filter((id) => id > 0)
   const history = await Promise.all(historyIds.map((id) => getCycleRecord(id)))
 
-  const fails = (consecutiveFails as number) ?? 0
-  const codeFails = (codeFailCount as number) ?? 0
+  const childFails = (consecutiveFails as number) ?? 0
+  const bodyFails  = (codeFailCount   as number) ?? 0
+  const mindFails  = (mindFailCount   as number) ?? 0
 
   return (
     <main className="min-h-screen text-white/80" style={{ fontFamily: 'var(--font-geist-mono)' }}>
@@ -62,10 +64,13 @@ export default async function AdminPage() {
         <p className="text-white/30 text-xs uppercase tracking-widest">admin</p>
         <span className="text-white/20 text-xs">cycle {cycleId}</span>
         <span className="text-white/20 text-xs">
-          fails: <span className="text-white/50">{fails}</span>
+          Child: <span className="text-white/50">{childFails}</span>
         </span>
         <span className="text-white/20 text-xs">
-          code fails: <span className="text-white/50">{codeFails}</span>
+          Body: <span className="text-white/50">{bodyFails}</span>
+        </span>
+        <span className="text-white/20 text-xs">
+          Mind: <span className="text-white/50">{mindFails}</span>
         </span>
         <form action={logout} className="ml-auto">
           <button type="submit" className="text-xs text-white/20 hover:text-white/40 transition-colors">

@@ -104,6 +104,12 @@ export async function runCycle(): Promise<CycleResult> {
     intake_condensed: condensed || undefined,
   })
 
+  // Mind's failures: increments when recommendation is not 'fail' (pass or null)
+  if (mindResult.recommendation !== 'fail') {
+    const current = ((await getMeta('mind_fail_count')) as number) ?? 0
+    await setMeta('mind_fail_count', current + 1)
+  }
+
   // ── Step 5: Increment cycle counter ────────────────────────────────────────
   await incrementCycleId()
 

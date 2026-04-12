@@ -11,9 +11,10 @@ const PROMPTS = [
 ]
 
 export default async function Stage() {
-  const [consecutiveFails, codeFailCount, cycleId, bodyCode] = await Promise.all([
+  const [consecutiveFails, codeFailCount, mindFailCount, cycleId, bodyCode] = await Promise.all([
     getMeta('consecutive_fails'),
     getMeta('code_fail_count'),
+    getMeta('mind_fail_count'),
     getCurrentCycleId(),
     getCurrentBodyCode(),
   ])
@@ -23,9 +24,10 @@ export default async function Stage() {
     cycleId > 0 ? getIntakeResponses(cycleId) : Promise.resolve([]),
   ])
 
-  const fails     = (consecutiveFails as number) ?? 0
-  const codeFails = (codeFailCount as number) ?? 0
-  const html      = bodyCode ?? ''
+  const childFails = (consecutiveFails as number) ?? 0
+  const bodyFails  = (codeFailCount    as number) ?? 0
+  const mindFails  = (mindFailCount    as number) ?? 0
+  const html       = bodyCode ?? ''
 
   return (
     <main className="min-h-screen text-white/80 pt-20" style={{ fontFamily: 'var(--font-geist-mono)' }}>
@@ -35,9 +37,11 @@ export default async function Stage() {
         <h1 className="text-white text-sm tracking-widest uppercase">childmindbody</h1>
         <span className="text-white/55 text-xs">cycle {cycleId}</span>
         <span className="ml-auto text-xs text-white/55">
-          consecutive failures: <span className="text-white/90">{fails}</span>
+          Child&apos;s failures: <span className="text-white/90">{childFails}</span>
           <span className="mx-4 text-white/30">·</span>
-          code failures: <span className="text-white/90">{codeFails}</span>
+          Body&apos;s failures: <span className="text-white/90">{bodyFails}</span>
+          <span className="mx-4 text-white/30">·</span>
+          Mind&apos;s failures: <span className="text-white/90">{mindFails}</span>
         </span>
       </header>
 

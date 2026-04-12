@@ -27,7 +27,10 @@ export default function Gallery() {
   const [center,      setCenter]      = useState({ x: 0, y: 0 })
   const [arrivingUrl, setArrivingUrl] = useState<string | null>(null)
 
-  // Persistent compliment — typewriters in, then stays until replaced
+  // Raw URLs kept in a ref so resize can re-layout without refetching
+  const rawUrlsRef = useRef<string[]>([])
+
+  // Persistent compliment
   const [compliment,      setCompliment]      = useState<string | null>(null)
   const [complimentCount, setComplimentCount] = useState(0)
 
@@ -35,62 +38,83 @@ export default function Gallery() {
   const [uploadError, setUploadError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // ── Load images + stored compliment ───────────────────────────────────────
+  // ── Layout from URLs (no fetch — called on load and resize) ───────────────
 
-  async function loadImages(newUrl?: string) {
-    const res = await fetch('/api/gallery/images')
-    if (!res.ok) return
-    const data = await res.json()
-    const urls: string[] = data.images ?? []
-
+  function layoutImages(urls: string[], newUrl?: string) {
+    if (urls.length === 0) { setImages([]); return }
     const vw = window.innerWidth
     const vh = window.innerHeight
     const cx = vw / 2
     const cy = vh / 2
     setCenter({ x: cx, y: cy })
 
-    if (urls.length > 0) {
-      const n = urls.length
-      const radius = Math.min(vw, vh) * 0.40
-      setImages(
-        urls.map((url, i) => {
-          const angle = (2 * Math.PI / n) * i + rand(-0.25, 0.25)
-          const r     = radius + rand(-60, 60)
-          const size  = rand(100, 160)
-          return {
-            url,
-            x:        cx + r * Math.cos(angle) - size / 2,
-            y:        cy + r * Math.sin(angle) - size / 2,
-            size,
-            initRot:  rand(-20, 20),
-            dx:       `${rand(-50, 50).toFixed(1)}px`,
-            dy:       `${rand(-50, 50).toFixed(1)}px`,
-            dr:       `${rand(-16, 16).toFixed(1)}deg`,
-            duration: rand(14, 28),
-            delay:    newUrl && url === newUrl ? 1.4 : rand(-30, 0),
-            zIndex:   Math.floor(rand(0, 10)),
-          }
-        })
-      )
-    } else {
-      setImages([])
-    }
+    const n      = urls.length
+    const radius = Math.min(vw, vh) * 0.40
+
+    setImages(
+      urls.map((url, i) => {
+        const angle = (2 * Math.PI / n) * i + rand(-0.25, 0.25)
+        const r     = radius + rand(-60, 60)
+        const size  = rand(100, 160)
+        return {
+          url,
+          x:        cx + r * Math.cos(angle) - size / 2,
+          y:        cy + r * Math.sin(angle) - size / 2,
+          size,
+          initRot:  rand(-20, 20),
+          dx:       `${rand(-50, 50).toFixed(1)}px`,
+          dy:       `${rand(-50, 50).toFixed(1)}px`,
+          dr:       `${rand(-16, 16).toFixed(1)}deg`,
+          duration: rand(14, 28),
+          delay:    newUrl && url === newUrl ? 1.4 : rand(-30, 0),
+          zIndex:   Math.floor(rand(0, 10)),
+        }
+      })
+    )
+  }
+
+  // ── Fetch images + compliment ─────────────────────────────────────────────
+
+  async function fetchGalleryData(newUrl?: string) {
+    const res = await fetch('/api/gallery/images')
+    if (!res.ok) return
+    const data = await res.json()
+    const urls: string[] = data.images ?? []
+    rawUrlsRef.current = urls
+    layoutImages(urls, newUrl)
 
     if (newUrl) {
       setArrivingUrl(newUrl)
       setTimeout(() => setArrivingUrl(null), 1600)
     }
 
-    // Show stored compliment on page load (only if not already showing a newer one)
     if (!newUrl && data.compliment) {
       setCompliment(data.compliment)
       setComplimentCount(0)
     }
   }
 
-  useEffect(() => { loadImages() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // ── Initial load ──────────────────────────────────────────────────────────
 
-  // ── Compliment typewriter — types in, then stays ───────────────────────────
+  useEffect(() => {
+    fetchGalleryData()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Resize: re-layout without refetching ──────────────────────────────────
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>
+    const handleResize = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        if (rawUrlsRef.current.length > 0) layoutImages(rawUrlsRef.current)
+      }, 150)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => { clearTimeout(timer); window.removeEventListener('resize', handleResize) }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Compliment typewriter ─────────────────────────────────────────────────
 
   useEffect(() => {
     if (!compliment || complimentCount >= compliment.length) return
@@ -98,7 +122,7 @@ export default function Gallery() {
     return () => clearTimeout(t)
   }, [compliment, complimentCount])
 
-  // ── Upload ─────────────────────────────────────────────────────────────────
+  // ── Upload ────────────────────────────────────────────────────────────────
 
   async function handleFile(file: File) {
     setUploading(true)
@@ -112,15 +136,14 @@ export default function Gallery() {
 
     if (data.ok) {
       if (data.compliment) {
-        // Clear old compliment and start new one
         setCompliment(null)
         setComplimentCount(0)
         setTimeout(() => {
           setCompliment(data.compliment)
           setComplimentCount(0)
-        }, 1200) // wait for placement animation to start
+        }, 1200)
       }
-      await loadImages(data.url)
+      await fetchGalleryData(data.url)
       if (fileRef.current) fileRef.current.value = ''
     } else {
       setUploadError(data.error ?? 'Upload failed')
@@ -130,7 +153,7 @@ export default function Gallery() {
 
   const isDoneTyping = compliment !== null && complimentCount >= compliment.length
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div
@@ -181,7 +204,7 @@ export default function Gallery() {
         )
       })}
 
-      {/* Center title */}
+      {/* Center title — always centered via flexbox, unaffected by image layout */}
       <div
         className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none"
         style={{ fontFamily: 'var(--font-geist-sans)' }}
@@ -192,18 +215,19 @@ export default function Gallery() {
         <p className="text-white/50 text-xs mt-1 tracking-wider">— Human created, Olin</p>
       </div>
 
-      {/* AI compliment — left side, persists */}
+      {/* AI compliment — left side, persists, labeled */}
       {compliment && (
         <div
           className="fixed z-20 pointer-events-none"
           style={{
-            left:      '24px',
-            top:       '50%',
-            transform: 'translateY(-50%)',
-            width:     '150px',
+            left:       '20px',
+            top:        '50%',
+            transform:  'translateY(-50%)',
+            width:      '150px',
             fontFamily: 'var(--font-geist-sans)',
           }}
         >
+          <p className="text-white/40 text-xs uppercase tracking-widest mb-2">AI generated</p>
           <p
             className="text-white/75 text-xs leading-relaxed"
             style={{ textShadow: '0 1px 12px rgba(0,10,80,0.7)' }}
