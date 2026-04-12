@@ -8,6 +8,7 @@ type Message = {
   timestamp: string
 }
 
+const MAX_QUESTIONS = 5
 const MAX_WORDS     = 5
 const POLL_INTERVAL = 15_000
 
