@@ -17,6 +17,7 @@ export type MetaKey =
 export type CycleRecord = {
   id: number
   child_resolution?: string
+  body_direction?: string
   mind_analysis?: string
   mind_rec?: 'pass' | 'fail'
   chris_decision?: 'pass' | 'fail'

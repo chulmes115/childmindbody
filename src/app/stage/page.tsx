@@ -71,6 +71,14 @@ export default async function Stage() {
           ) : (
             <p className="text-white/30 text-sm italic">No resolution yet — trigger a cycle to begin.</p>
           )}
+          {currentRecord?.body_direction && (
+            <div className="mt-4">
+              <p className="text-xs tracking-widest uppercase text-white/30 mb-2">Child told Body</p>
+              <pre className="text-white/50 text-xs leading-relaxed whitespace-pre-wrap border border-white/8 p-4 rounded">
+                {currentRecord.body_direction}
+              </pre>
+            </div>
+          )}
         </section>
 
         {/* Mind's analysis */}

@@ -13,7 +13,6 @@ import {
   getInspirationImages,
 } from './db'
 import { runChild, runMind, runBody, condenseIntake } from './agents'
-import { SEED_PROMPT } from './prompts'
 import { runBodyMessageStep } from './bodyMessage'
 
 export type CycleResult = {
@@ -67,15 +66,16 @@ export async function runCycle(): Promise<CycleResult> {
   await saveCycleRecord({
     id: newCycleId,
     child_resolution: childResult.resolution,
+    body_direction: childResult.bodyDirection,
     consecutive_failures: (consecutiveFails as number) ?? 0,
     code_fail_count: (codeFailCount as number) ?? 0,
     reset_count: (codebaseResets as number) ?? 0,
   })
 
-  // ── Step 3: Run Body if prompted (or Day 1 seed) ────────────────────────────
-  const bodyPrompt = childResult.bodyPrompt ?? (isFirstRun ? SEED_PROMPT : undefined)
+  // ── Step 3: Run Body if Child directed it to change ─────────────────────────
+  const shouldUpdateBody = childResult.bodyDirection.toLowerCase().trim() !== 'change nothing'
 
-  if (bodyPrompt) {
+  if (shouldUpdateBody) {
     // 8K guard: if stored code is huge, clear it and increment reset counter
     if (bodyCode && bodyCode.length > 8000) {
       await Promise.all([
@@ -83,7 +83,7 @@ export async function runCycle(): Promise<CycleResult> {
         setMeta('codebase_resets', ((codebaseResets as number) ?? 0) + 1),
       ])
     }
-    const newBodyCode = await runBody(bodyPrompt)
+    const newBodyCode = await runBody(childResult.bodyDirection)
     await Promise.all([
       saveBodyCode(newBodyCode),
       saveCycleRecord({ id: newCycleId, body_code: newBodyCode }),
@@ -130,7 +130,7 @@ export async function runCycle(): Promise<CycleResult> {
     cycle: newCycleId,
     isFirstRun,
     childResolution: childResult.resolution,
-    bodyUpdated: !!bodyPrompt,
+    bodyUpdated: shouldUpdateBody,
     mindRecommendation: mindResult.recommendation,
   }
 }

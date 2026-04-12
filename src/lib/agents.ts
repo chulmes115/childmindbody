@@ -1,15 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk'
 import {
   CHILD_SYSTEM_PROMPT,
+  CHILD_BODY_DIRECTION_PROMPT,
   MIND_SYSTEM_PROMPT,
   BODY_SYSTEM_PROMPT,
 } from './prompts'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const MODEL = 'claude-haiku-4-5-20251001'
-
-// Parser delimiter — must match the separator in CHILD_SYSTEM_PROMPT
-const BODY_PROMPT_DELIMITER = '---BODY PROMPT---'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,11 +22,13 @@ export type ChildContext = {
 }
 
 // ─── Child ────────────────────────────────────────────────────────────────────
+// Two separate calls: (1) philosophical resolution, (2) body direction.
+// bodyDirection is always returned — either instructions or exactly "change nothing".
 
 export async function runChild(
   ctx: ChildContext
-): Promise<{ resolution: string; bodyPrompt?: string }> {
-  const userMessage = `\
+): Promise<{ resolution: string; bodyDirection: string }> {
+  const context = `\
 Start date: ${ctx.startDate}
 Consecutive failures: ${ctx.consecutiveFails}
 Code failures (Body errors): ${ctx.codeFailCount}
@@ -43,25 +43,34 @@ ${ctx.olinNote || '[No note left.]'}
 BODY'S CURRENT CODE:
 ${ctx.bodyCurrentCode || '[Nothing is displayed yet.]'}`
 
-  const msg = await anthropic.messages.create({
+  // Call 1: philosophical resolution
+  const resolutionMsg = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 700,
     system: [
       { type: 'text', text: CHILD_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
     ],
-    messages: [{ role: 'user', content: userMessage }],
+    messages: [{ role: 'user', content: context }],
   })
+  const resolution = (resolutionMsg.content[0] as Anthropic.TextBlock).text.trim()
 
-  const raw = (msg.content[0] as Anthropic.TextBlock).text
-  const delimiterIndex = raw.indexOf(BODY_PROMPT_DELIMITER)
+  // Call 2: body direction — always returns a definitive answer
+  const bodyMsg = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 500,
+    system: [
+      { type: 'text', text: CHILD_BODY_DIRECTION_PROMPT, cache_control: { type: 'ephemeral' } },
+    ],
+    messages: [
+      {
+        role: 'user',
+        content: `Your resolution for today:\n\n${resolution}\n\nWhat should Body display to visitors today?`,
+      },
+    ],
+  })
+  const bodyDirection = (bodyMsg.content[0] as Anthropic.TextBlock).text.trim()
 
-  if (delimiterIndex === -1) {
-    return { resolution: raw.trim() }
-  }
-
-  const resolution = raw.slice(0, delimiterIndex).trim()
-  const bodyPrompt = raw.slice(delimiterIndex + BODY_PROMPT_DELIMITER.length).trim()
-  return { resolution, bodyPrompt: bodyPrompt || undefined }
+  return { resolution, bodyDirection }
 }
 
 // ─── Mind ─────────────────────────────────────────────────────────────────────
