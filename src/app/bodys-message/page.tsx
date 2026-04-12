@@ -1,5 +1,5 @@
 import { getBodyMessageStatus, getInspirationImages } from '@/lib/db'
-import { EXCERPT_WORD_COUNT, WORDS_PER_CYCLE } from '@/lib/excerpt'
+import { EXCERPT_WORD_COUNT, EXCERPT_WORDS, WORDS_PER_CYCLE } from '@/lib/excerpt'
 import InspirationUpload from './InspirationUpload'
 
 export const dynamic = 'force-dynamic'
@@ -15,6 +15,13 @@ export default async function BodysMessage() {
   const cycleNumber  = status.wordPosition === 0 ? 0 : Math.ceil(status.wordPosition / CHUNK_SIZE)
   const totalCycles  = Math.ceil(EXCERPT_WORD_COUNT / CHUNK_SIZE)
   const progressPct  = status.wordPosition === 0 ? 0 : Math.round((status.wordPosition / EXCERPT_WORD_COUNT) * 100)
+
+  // Word window: previous chunk (dim) + current chunk (vivid)
+  const currentEnd   = status.wordPosition
+  const currentStart = Math.max(0, currentEnd - CHUNK_SIZE)
+  const pastStart    = Math.max(0, currentStart - CHUNK_SIZE)
+  const pastChunk    = currentStart > 0 ? EXCERPT_WORDS.slice(pastStart, currentStart).join(' ') : ''
+  const currentChunk = currentEnd   > 0 ? EXCERPT_WORDS.slice(currentStart, currentEnd).join(' ') : ''
 
   return (
     <main
@@ -59,6 +66,19 @@ export default async function BodysMessage() {
                     {status.lastPrompt}
                   </p>
                 </details>
+              )}
+
+              {/* Word window — past chunk (dim) + current chunk (vivid) */}
+              {currentChunk && (
+                <div className="pt-2">
+                  <p className="text-white/30 text-xs uppercase tracking-widest mb-3">words it&apos;s reading</p>
+                  <p className="text-sm leading-relaxed">
+                    {pastChunk && (
+                      <span className="text-[#7dd3fc]/30">{pastChunk}{' '}</span>
+                    )}
+                    <span className="text-[#7dd3fc]/80">{currentChunk}</span>
+                  </p>
+                </div>
               )}
             </div>
           ) : (
