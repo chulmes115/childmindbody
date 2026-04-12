@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { getCurrentCycleId, getCycleRecord, getMeta, setMeta, getCurrentBodyCode, saveCycleRecord } from '@/lib/db'
+import { getCurrentCycleId, getCycleRecord, getMeta, setMeta, getCurrentBodyCode, saveCycleRecord, countIntakeResponses } from '@/lib/db'
 import { runChild } from '@/lib/agents'
 
 export const maxDuration = 60
@@ -40,10 +40,20 @@ export async function POST() {
         return today
       })()
 
+    // Zero-intake penalty: if last cycle collected no responses, count as a code failure
+    let effectiveCodeFails = (codeFailCount as number) ?? 0
+    if (!isFirstRun) {
+      const intakeCount = await countIntakeResponses(lastCycleId)
+      if (intakeCount === 0) {
+        effectiveCodeFails += 1
+        await setMeta('code_fail_count', effectiveCodeFails)
+      }
+    }
+
     const { resolution, bodyDirection } = await runChild({
       startDate,
       consecutiveFails: (consecutiveFails as number) ?? 0,
-      codeFailCount:    (codeFailCount    as number) ?? 0,
+      codeFailCount:    effectiveCodeFails,
       codebaseResets:   (codebaseResets   as number) ?? 0,
       priorAnalysis:    priorRecord?.mind_analysis ?? '',
       bodyCurrentCode:  bodyCode ?? '',
@@ -55,7 +65,7 @@ export async function POST() {
       child_resolution:    resolution,
       body_direction:      bodyDirection,
       consecutive_failures: (consecutiveFails as number) ?? 0,
-      code_fail_count:     (codeFailCount    as number) ?? 0,
+      code_fail_count:     effectiveCodeFails,
       reset_count:         (codebaseResets   as number) ?? 0,
     })
 
