@@ -27,6 +27,7 @@ export type CycleRecord = {
   reset_count?: number
   body_code?: string
   intake_condensed?: string
+  intake_killed?: boolean
 }
 
 // ─── META counters ────────────────────────────────────────────────────────────
@@ -149,6 +150,18 @@ export async function getIntakeResponses(cycleId: number): Promise<string[]> {
     })
   )
   return (Items ?? []).map((item) => item.response as string)
+}
+
+export async function countIntakeResponses(cycleId: number): Promise<number> {
+  const { Count } = await dynamo.send(
+    new QueryCommand({
+      TableName: TABLE,
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': `INTAKE#${cycleId}` },
+      Select: 'COUNT',
+    })
+  )
+  return Count ?? 0
 }
 
 // ─── Body's Message state ─────────────────────────────────────────────────────
