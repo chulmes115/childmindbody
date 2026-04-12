@@ -1,5 +1,5 @@
 import { getBodyMessageStatus, getInspirationImages } from '@/lib/db'
-import { EXCERPT_WORD_COUNT, EXCERPT_WORDS, WORDS_PER_CYCLE } from '@/lib/excerpt'
+import { STORY_WORD_COUNT, STORY_WORDS, WORDS_PER_CYCLE } from '@/lib/excerpt'
 import InspirationUpload from './InspirationUpload'
 
 export const dynamic = 'force-dynamic'
@@ -13,15 +13,15 @@ export default async function BodysMessage() {
   ])
 
   const cycleNumber  = status.wordPosition === 0 ? 0 : Math.ceil(status.wordPosition / CHUNK_SIZE)
-  const totalCycles  = Math.ceil(EXCERPT_WORD_COUNT / CHUNK_SIZE)
-  const progressPct  = status.wordPosition === 0 ? 0 : Math.round((status.wordPosition / EXCERPT_WORD_COUNT) * 100)
+  const totalCycles  = Math.ceil(STORY_WORD_COUNT / CHUNK_SIZE)
+  const progressPct  = status.wordPosition === 0 ? 0 : Math.round((status.wordPosition / STORY_WORD_COUNT) * 100)
 
   // Word window: previous chunk (dim) + current chunk (vivid)
   const currentEnd   = status.wordPosition
   const currentStart = Math.max(0, currentEnd - CHUNK_SIZE)
   const pastStart    = Math.max(0, currentStart - CHUNK_SIZE)
-  const pastChunk    = currentStart > 0 ? EXCERPT_WORDS.slice(pastStart, currentStart).join(' ') : ''
-  const currentChunk = currentEnd   > 0 ? EXCERPT_WORDS.slice(currentStart, currentEnd).join(' ') : ''
+  const pastChunk    = currentStart > 0 ? STORY_WORDS.slice(pastStart, currentStart).join(' ') : ''
+  const currentChunk = currentEnd   > 0 ? STORY_WORDS.slice(currentStart, currentEnd).join(' ') : ''
 
   return (
     <main
@@ -33,7 +33,7 @@ export default async function BodysMessage() {
         {/* AI Generated — current image */}
         <section>
           <div className="flex items-baseline justify-between mb-6">
-            <p className="text-white/45 text-xs uppercase tracking-widest">Body's message</p>
+            <p className="text-white/45 text-xs uppercase tracking-widest">Body's dream</p>
             <p className="text-white/35 text-xs">— AI generated</p>
           </div>
 
@@ -46,7 +46,7 @@ export default async function BodysMessage() {
               />
               <div className="flex items-center justify-between text-xs text-white/45">
                 <span>
-                  cycle {cycleNumber} of {totalCycles} · words 1–{status.wordPosition} of {EXCERPT_WORD_COUNT}
+                  cycle {cycleNumber} of {totalCycles} · words 1–{status.wordPosition} of {STORY_WORD_COUNT}
                 </span>
                 <span>{progressPct}%</span>
               </div>

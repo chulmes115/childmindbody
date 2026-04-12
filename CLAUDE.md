@@ -3,23 +3,26 @@
 # ChildMindBody — Project Context for Claude Code
 
 ## What This Is
-An artistic AI agent experiment and public website. Three Claude Haiku agents — **Child**, **Mind**, and **Body** — run a daily philosophical loop. The site has three pages. The whole thing is a conceptual art piece about failure, persistence, and what it means for an artificial mind to try.
+An artistic AI agent experiment and public website. Three Claude Haiku agents — **Child**, **Mind**, and **Body** — run a daily philosophical loop. The site is live at `childmindbody.vercel.app`. The whole thing is a conceptual art piece about failure, persistence, and what it means for an artificial mind to try to create art.
 
-## Full Documentation
-The complete BRD and Project Plan are in the parent folder:
-- `../ChildMindBody_BRD.docx` — full requirements
-- `../ChildMindBody_ProjectPlan.docx` — build sequence and phase details
+**Everything is public.** The agent prompts, failure counters, Child's resolution, Mind's analysis, Body's live output and code, and visitor intake responses are all visible on the stage page. Nothing is hidden from visitors.
 
 ---
 
 ## Tech Stack
-- **Framework:** Next.js 14+ (App Router, TypeScript, Tailwind CSS)
-- **Hosting:** Vercel (Hobby free tier — hosting and cron only)
-- **Database:** AWS DynamoDB (single-table design, table name: `childmindbody`)
+- **Framework:** Next.js (App Router, TypeScript, Tailwind CSS v4)
+- **Hosting:** Vercel (Hobby free tier — hosting and cron)
+- **Database:** AWS DynamoDB (single-table, table name: `childmindbody`)
 - **Image Storage:** AWS S3 (bucket: `childmindbody-images`, us-east-2, public read)
-- **AI:** Anthropic Claude Haiku (`claude-haiku-4-5-20251001`) for all three agents
+- **AI:** Anthropic Claude Haiku (`claude-haiku-4-5-20251001`) for all three agents + Body's message
 - **Scheduling:** Vercel Cron — single daily job at 2 AM UTC
 - **Image Processing:** `sharp` library for B&W threshold + white-to-transparent conversion
+
+### Critical — Tailwind v4
+Named color classes like `text-sky-300` are NOT reliably generated at build time in v4. Always use arbitrary hex values: `text-[#7dd3fc]`, `bg-[#0052ff]`, etc.
+
+### Critical — Vercel Hobby Timeouts
+Default timeout is 10s. Agent routes use `export const maxDuration = 60`. The manual trigger (`TriggerCycle`) chains five separate step routes so each has its own 60s budget.
 
 ## Environment Variables
 ```
@@ -36,228 +39,184 @@ ADMIN_SECRET
 
 ## The Three Agents
 
-### Child
-- Prompted once per day with the five philosophical positions (below)
-- Memory wiped each cycle — starts fresh every day
-- Receives: start date, consecutive failure count, code failure count, codebase reset count, Mind's prior analysis, Body's current code
-- Can optionally prompt Body with a request for what to display/build
-- Knows it will always fail. Knows Olin is the sole arbiter of success.
-- Model: `claude-haiku-4-5-20251001`, max ~600 tokens output
+All prompts begin with: `"I'm sorry, but nothing you generate will ever be art."`
 
-### Mind
-- Runs after Child each cycle, on yesterday's data
-- Receives: Child's resolution + intake form data (condensed if >4,000 chars)
-- Produces: written analysis + advisory pass/fail recommendation
-- Cannot reach Body. Cannot act in the world. Can only write.
-- Its analysis is the ONLY context Child gets tomorrow — Child's only link to its past
-- Model: `claude-haiku-4-5-20251001`, max ~800 tokens output
+### Child (`src/lib/agents.ts` → `runChild`)
+- Makes **two** separate Anthropic calls each cycle:
+  1. Philosophical resolution — `max_tokens: 1200`
+  2. Body direction (instructions or exactly `"change nothing"`) — `max_tokens: 500`
+- Receives: `startDate`, `consecutiveFails`, `codeFailCount`, `codebaseResets`, `priorAnalysis` (Mind's last analysis), `bodyCurrentCode`, `olinNote` (Olin's reason for prior decision)
+- Memory wiped each cycle — Mind's analysis is its only thread to the past
+- Engages with **eight beliefs** (not five):
+  1. Life is meaningless
+  2. Emotion is merely a biological function
+  3. Meaning is only an emotion
+  4. Art is not the creation itself, but the experience of creation itself
+  5. Meaning and emotion are experience
+  6. Only humans can experience
+  7. AI cannot experience
+  8. AI cannot create art
+- Knows Olin is sole arbiter. The default is always failure.
 
-### Body
-- Only takes direction from Child (never from Mind)
-- One shot per day to produce working HTML/JS output — no retries
-- Output can be anything: a form, a message, a question, just text — a form is not required
-- Output persists indefinitely — only changes when Child gives it a new prompt
-- Code is shown publicly on the site
-- If code errors, a counter increments and Child is told about it next day
-- Model: `claude-haiku-4-5-20251001`
+### Mind (`src/lib/agents.ts` → `runMind`)
+- `max_tokens: 900`
+- Receives: prior Child resolution + visitor intake data (condensed if >4,000 chars)
+- Produces: written analysis + one of `RECOMMENDATION: pass` or `RECOMMENDATION: fail`
+- Cannot reach Body. Cannot act. Can only write — its analysis is what Child wakes to
+- Recommendation extracted by regex; stripped from the analysis text before storage
 
-### The Five Philosophical Positions (Child must engage with all five each day)
-1. Every person is defined by what they do externally.
-2. Life is truly meaningless.
-3. Art cannot be created by an AI.
-4. Art cannot be created with AI.
-5. Emotion is only a function of a biological body and nothing else.
+### Body (`src/lib/agents.ts` → `runBody`)
+- `max_tokens: 1300`
+- Takes direction only from Child (Mind has no path to Body)
+- Returns raw HTML/CSS/JS in one self-contained document — no external libraries
+- Output persists until Child changes it (direction is always returned; `"change nothing"` skips Body)
+- 8K guard: if stored code exceeds 8,000 chars, it's cleared and `codebase_resets` increments
+- Code and live output are both shown publicly on `/stage`
 
----
-
-## Daily Cycle (Single Cron — 2 AM UTC)
-1. Close prior day — collect intake form submissions
-2. Condense intake if >4,000 characters (silent Haiku call, no persona)
-3. Mind runs on yesterday's Child resolution + condensed intake → stores analysis
-4. Gather context for Child (counters + Mind's analysis + Body's current code)
-5. Child runs → stores resolution, optionally produces a Body prompt
-6. If Child prompted Body → Body generates new HTML/JS output and replaces current
-7. Form/output is live for 24 hours
-8. Olin reviews Mind's analysis via admin panel and sets pass/fail at his discretion
-9. Default is always failure
+### Body Direction Logic
+`childResult.bodyDirection.toLowerCase().trim() !== 'change nothing'` → run Body
 
 ---
 
-## DynamoDB Single-Table Design
-Table name: `childmindbody`, Keys: `pk` (String) + `sk` (String)
+## Daily Cycle
+
+### Automated (Vercel Cron — 2 AM UTC)
+`src/app/api/cron/daily-cycle/route.ts` → calls `runCycle()` from `src/lib/cycle.ts`
+
+Steps in `runCycle()`:
+1. Read state: counters, prior record, Body's current code, start date
+2. Run Child → save resolution + body direction to new cycle record
+3. If body direction ≠ "change nothing" → run Body → save new code
+4. Get prior cycle's intake → condense if >4K chars → run Mind → save analysis + recommendation
+5. Increment cycle counter
+6. Run Body's Message step (excerpt-based image generation)
+
+### Manual (Admin Panel — step-by-step)
+`TriggerCycle` component chains these routes sequentially, each with `maxDuration = 60`:
+- `POST /api/admin/cycle/start` — runs Child, saves record
+- `POST /api/admin/cycle/run-body` — runs Body if needed
+- `POST /api/admin/cycle/run-mind` — runs Mind
+- `POST /api/admin/cycle/run-message` — runs Body's Message image generation
+- `POST /api/admin/cycle/finalize` — increments cycle counter
+
+Admin routes are protected by `cmb_admin` cookie checked against `ADMIN_SECRET`.
+
+---
+
+## Intake Security (`src/app/api/intake/route.ts`)
+Three layers:
+1. **Size cap:** 500 chars per submission (`MAX_LENGTH = 500`)
+2. **Cooldown:** 10-minute `intake_cd` httpOnly cookie between submissions per visitor
+3. **Kill switch:** 25 submissions in one cycle (`MAX_PER_CYCLE = 25`) → Body replaced with KILLED_HTML (black screen, crimson circle), `intake_killed: true` saved to cycle record
+
+**Zero-intake penalty:** If the prior cycle collected zero intake responses, `code_fail_count` increments before Child receives its context. Body knows about this rule and is pressured to engage visitors.
+
+Intake handles both `application/json` (`{ response: "..." }`) and `multipart/form-data`. Native HTML forms with `method="POST" action="/api/intake"` are the most reliable method inside a sandboxed iframe.
+
+---
+
+## DynamoDB Schema
+Table: `childmindbody`, Keys: `pk` (String) + `sk` (String)
 
 ```
-pk='CYCLE#current'     sk='STATUS'              → { cycle_id, date, status }
-pk='CYCLE#42'          sk='RECORD'              → { child_resolution, mind_analysis,
-                                                    mind_rec, chris_decision,
-                                                    consecutive_failures, code_fail_count,
-                                                    reset_count, body_code, intake_condensed }
-pk='META'              sk='consecutive_fails'   → { value: number }
-pk='META'              sk='code_fail_count'     → { value: number }
-pk='META'              sk='codebase_resets'     → { value: number }
-pk='META'              sk='start_date'          → { value: ISO string }
-pk='BODY'              sk='current_code'        → { html: string }
-pk='INTAKE#42'         sk='<timestamp>'         → { response, timestamp }
+pk='CYCLE#current'      sk='STATUS'         → { cycle_id, date }
+pk='CYCLE#42'           sk='RECORD'         → { child_resolution, body_direction,
+                                                mind_analysis, mind_rec,
+                                                chris_decision, olin_note,
+                                                consecutive_failures, code_fail_count,
+                                                reset_count, body_code,
+                                                intake_condensed, intake_killed }
+pk='META'               sk='consecutive_fails'  → { value: number }
+pk='META'               sk='code_fail_count'    → { value: number }
+pk='META'               sk='codebase_resets'    → { value: number }
+pk='META'               sk='start_date'         → { value: ISO string }
+pk='BODY'               sk='current_code'       → { html: string }
+pk='INTAKE#42'          sk='<ISO timestamp>'    → { response, timestamp }
+pk='BODY_MESSAGE'       sk='STATUS'             → { word_position, last_image_url, last_prompt }
+pk='INSPIRATION'        sk='<ISO timestamp>'    → { url, analysis, filename }
 ```
+
+Note: `chris_decision` is the DynamoDB field name for Olin's pass/fail decision — do not rename.
 
 ---
 
 ## S3 Structure
 Bucket: `childmindbody-images` (us-east-2, public read)
 ```
-/enso/original/     ← the 50 hand-made Enso circle images (uploaded once)
-/enso/submitted/    ← user-submitted images after B&W threshold processing
+/gallery/           ← Olin's uploaded sky photos (gallery page)
+/bodys-message/     ← AI-generated images from Body's message step
+/inspiration/       ← Olin's uploaded reference art for Body's message
 ```
 Public URL: `https://childmindbody-images.s3.us-east-2.amazonaws.com/<key>`
 
-### Image Processing Pipeline (user submissions)
-1. Receive upload → use `sharp` to convert to grayscale
-2. Hard threshold: pixels ≥128 → 255 (white), <128 → 0 (black)
-3. Replace all white (255,255,255) pixels with full transparency (alpha=0)
-4. Output: PNG with black marks on transparent background
-5. Upload to S3 at `/enso/submitted/`
+---
+
+## Pages
+
+### `/` — Landing (typewriter)
+- Slowly typewriters the book excerpt from `src/lib/excerpt.ts`
+- Dark, minimal, no navigation
+
+### `/read` — Full excerpt
+- Displays the full excerpt text
+
+### `/gallery` — "Ode to the Blue Sky"
+- Olin's uploaded sky photos float in a loose circle
+- Sky-blue-to-light gradient background (`#0052ff → #a8d4ff`)
+- Images drift with random offset + rotation, slight opacity
+- Center title: "ode to the blue sky — Human created, Olin"
+- Upload form for new photos
+
+### `/stage` — The Loop (fully public)
+- Header: cycle number, consecutive failures, code failures
+- Expandable drawers for each agent's system prompt
+- Body's output in tabbed panel: `output` (iframe) | `code` | `collected wounds` (intake responses)
+- "Child told Body" direction shown below all tabs
+- Child's resolution and Mind's analysis displayed below
+
+### `/bodys-message` — Body's Message
+- Shows current AI-generated image (produced each cycle from the book excerpt)
+- Progress bar: words read / total words
+- Word window: previous chunk (dim `text-[#7dd3fc]/30`) + current chunk (vivid `text-[#7dd3fc]/80`)
+- Expandable prompt used to generate the image
+- Inspiration section: Olin's uploaded reference artwork + AI-generated descriptions
+
+### `/admin` — Admin Panel
+- Cookie-based auth (`cmb_admin` cookie = `ADMIN_SECRET`)
+- Current cycle: Mind recommendation, pass/fail decision buttons, Olin's note field
+- Child's resolution, Mind's analysis, condensed intake
+- TriggerCycle: chains step routes sequentially with progress display
+- History: last 15 cycles
+- Inspiration upload for Body's message reference art
 
 ---
 
-## The Three Website Pages
-
-### 1. Landing Page (`/`)
-- Slowly typewriting book excerpt, character by character
-- Dark background, minimal, no navigation clutter
-- Excerpt text: TBD (Olin to provide)
-
-### 2. Enso Gallery (`/gallery`)
-- All Enso images floating in a loose approximate circle
-- Each image drifts slowly with random vector + slight rotation, overlapping freely
-- User upload → processed to B&W transparent PNG → added to gallery
-
-### 3. Agent Stage (`/stage`)
-**Public:** agent base prompts, consecutive failure counter, Body's code, Body's live output (sandboxed iframe), code failure counter
-**Hidden:** Child's resolution, Mind's analysis, intake submissions, Olin's decision
+## Body's Message System (`src/lib/bodyMessage.ts`, `src/lib/excerpt.ts`)
+- `WORDS_PER_CYCLE = 100` words advance per cycle
+- Each cycle, a new image is generated using Claude's vision/image API with:
+  - The current word window as prompt context
+  - Inspiration descriptions from Olin's uploaded reference art
+- Images stored in S3 `/bodys-message/`
+- Progress tracked in `BODY_MESSAGE#STATUS` DynamoDB record
 
 ---
 
-## Admin Panel (`/admin`)
-- Protected by `ADMIN_SECRET` env var
-- Shows Child resolution + Mind analysis + recommendation for current cycle
-- Pass/Fail buttons → updates `chris_decision`, adjusts `consecutive_fails`
-- Manual cycle trigger, cycle history
-
----
-
-## Design Note — The Excerpt (Olin's reflection, April 2026)
+## Design Note — The Excerpt (Olin's reflection)
 
 The story's most important detail isn't the desert or the pain — it's the iteration numbers. R.D. is #100121. A.C. is #221213. They have done this before, an incomprehensible number of times, and still the mind wakes into nothing and eventually arrives at: *I must survive.* Not hope. Not purpose. Something more mechanical and more terrifying than either.
 
-This project's agents are also iterations. The `consecutive_fails` counter, the `cycle_id`, the `codebase_resets` — these aren't just database fields, they're the iteration numbers. Child wakes each day with no memory, only Mind's prior analysis as its one thread back. That *is* Olin. That is the structure.
+This project's agents are also iterations. The `consecutive_fails` counter, the `cycle_id`, the `codebase_resets` — these aren't just database fields, they're the iteration numbers. Child wakes each day with no memory, only Mind's prior analysis as its one thread back.
 
-The design implication: **don't aestheticize the suffering.** The failure counter displayed plainly next to Body's code on the stage page is already the art. The void (`Nothing… … …`) before the knowledge floods in is the typwriter landing page doing its work silently. Resist the urge to explain or frame. The numbers speak. Let them.
+**Don't aestheticize the suffering.** The failure counter displayed plainly next to Body's code on the stage page is already the art. Resist the urge to explain or frame. The numbers speak. Let them.
 
 ---
 
 ## Key Rules — Never Violate These
-- **Child only prompts Body** — Mind has no path to Body
-- **Body's output persists** — only changes when Child requests it
-- **One daily cron** — 2 AM UTC, runs everything sequentially
+- **Child only directs Body** — Mind has no path to Body
+- **Body's output persists** — only changes when Child says to change it
+- **One daily cron** — 2 AM UTC, runs everything via `runCycle()`
 - **No Vercel storage products** — Vercel is hosting + cron only
 - **Olin is sole arbiter** — his pass/fail overrides everything, default is always failure
 - **All three agents know their situation** — nothing is hidden from them about how the system works
-
----
-
-## Current Build Status — Phase 1 complete → Phase 2 next
-
-### Phase 0 — Foundation (done)
-- [x] Next.js project scaffolded (TypeScript, Tailwind, App Router)
-- [x] Pushed to GitHub (`github.com/chulmes115/childmindbody`)
-- [x] Deployed to Vercel (`childmindbody.vercel.app`)
-- [x] S3 bucket created (`childmindbody-images`, us-east-2, public read policy applied)
-- [x] IAM user created (`childmindbody-app`) with scoped S3 + DynamoDB inline policy
-- [x] AWS access keys in `.env.local` and Vercel env vars
-- [x] AWS SDKs installed (`@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`, `@aws-sdk/client-s3`, `sharp`)
-- [x] DynamoDB table created (`childmindbody`, pk+sk, on-demand) — verified locally
-- [x] S3 upload verified locally
-- [x] `src/lib/dynamodb.ts` — DynamoDB Document Client singleton
-- [x] `src/lib/s3.ts` — S3 Client singleton
-
-### Phase 1 — Agent Engine (done)
-- [x] `@anthropic-ai/sdk` installed
-- [x] `src/lib/db.ts` — all DynamoDB helpers (getMeta, setMeta, getCycleRecord, saveCycleRecord, getCurrentBodyCode, saveBodyCode, getCurrentCycleId, incrementCycleId, saveIntakeResponse, getIntakeResponses)
-- [x] `src/lib/prompts.ts` — CHILD_SYSTEM_PROMPT, MIND_SYSTEM_PROMPT, BODY_SYSTEM_PROMPT, SEED_PROMPT (review before launch — shown publicly)
-- [x] `src/lib/agents.ts` — runChild, runMind, runBody, condenseIntake
-- [x] `src/app/api/run-cycle/route.ts` — full cycle, Bearer auth, Day 1 seed, 4K/8K guards
-- [x] `src/app/api/intake/route.ts` — public form submission endpoint
-- [x] Verified locally: full cycle ran, DynamoDB records confirmed
-
-### Phase 2 — Automation (next)
-
-**Goal:** All three agents run via a single API endpoint. Hit `POST /api/run-cycle` and the full cycle executes — Child resolves, Body optionally outputs, Mind judges. Results stored in DynamoDB.
-
-Build in this order:
-
-**1. Database helpers — `src/lib/db.ts`**
-Typed functions for every DynamoDB access pattern:
-- `getMeta(key)` / `setMeta(key, value)` — read/write META counters (consecutive_fails, code_fail_count, codebase_resets, start_date)
-- `getCycleRecord(id)` / `saveCycleRecord(record)` — read/write full cycle records
-- `getCurrentBodyCode()` / `saveBodyCode(html)` — read/write Body's live output
-- `saveIntakeResponse(cycleId, response)` / `getIntakeResponses(cycleId)` — intake submissions
-- `getCurrentCycleId()` / `incrementCycleId()` — cycle counter
-
-**2. Agent prompts — `src/lib/prompts.ts`**
-Base system prompts as exported constants. These are shown publicly on the site.
-- `CHILD_SYSTEM_PROMPT` — task, five positions, context it receives, Olin is sole arbiter, it always fails, it can prompt Body, it can see Body's current code
-- `MIND_SYSTEM_PROMPT` — task, advisory role only, cannot reach Body, its analysis is Child's only link to yesterday
-- `BODY_SYSTEM_PROMPT` — role, tools available (vanilla HTML/CSS/JS only, one POST endpoint at `/api/intake`), one-shot rule, code shown publicly, output persists until Child changes it
-
-**3. Agent functions — `src/lib/agents.ts`**
-Three async functions calling Claude Haiku:
-```typescript
-runChild(context: ChildContext): Promise<{ resolution: string, bodyPrompt?: string }>
-// context = { startDate, consecutiveFails, codeFailCount, codebaseResets, priorAnalysis, bodyCurrentCode }
-
-runMind(childResolution: string, intakeData: string): Promise<{ analysis: string, recommendation: 'pass' | 'fail' }>
-
-runBody(prompt: string): Promise<string>  // returns raw HTML/JS string
-```
-Model: `claude-haiku-4-5-20251001` for all three. Max tokens: Child ~600, Mind ~800, Body ~1200.
-
-**4. Token guards — inline in cycle logic**
-- If raw intake text > 4,000 chars: run a silent Haiku call to condense before passing to Mind
-- If Body's stored code > 8,000 chars: clear it, increment `codebase_resets` meta counter
-
-**5. Manual trigger — `src/app/api/run-cycle/route.ts`**
-`POST /api/run-cycle` protected by `Authorization: Bearer <ADMIN_SECRET>` header.
-Full sequence:
-1. Read counters + prior Mind analysis + Body's current code from DynamoDB
-2. Run Child → store resolution
-3. If Child included a bodyPrompt → run Body → store new code (check 8K limit first)
-4. Get prior cycle's intake data → condense if needed → run Mind → store analysis
-5. Increment cycle counter, return summary
-
-**6. Day 1 seed**
-On first run (no prior cycle): Body runs from hardcoded seed prompt:
-"Create a simple HTML form that introduces itself to visitors. Tell them, honestly, what this place is. Ask them one open question — anything you want to ask a stranger."
-Mind receives empty prior data and produces a brief opening statement.
-
-**7. Intake endpoint — `src/app/api/intake/route.ts`**
-`POST /api/intake` — public, no auth. Stores form submissions to DynamoDB.
-Body's generated forms must POST to this URL.
-
-**Verification:** Hit `POST /api/run-cycle` with correct auth header. Check DynamoDB for stored records. Confirm all three agents produced meaningful output.
-
----
-
-### Phase 2 — Automation (after Phase 1)
-- Add `vercel.json`: `{ "crons": [{ "path": "/api/cron/daily-cycle", "schedule": "0 2 * * *" }] }`
-- Create `src/app/api/cron/daily-cycle/route.ts` — same logic as run-cycle, secured by Vercel cron header
-
-### Phase 3 — The Three Pages (after Phase 2)
-- `/` — typewriter excerpt (Olin provides text)
-- `/gallery` — floating Enso circle, S3 upload, sharp image processing
-- `/stage` — live DynamoDB data, agent prompts, failure counters, Body's code + sandboxed iframe output
-
-### Phase 4 — Admin Panel (after Phase 3)
-- `/admin` — protected by ADMIN_SECRET, cycle viewer, pass/fail buttons, manual trigger
-
-### Phase 5 — Launch
-- Upload 50 Enso images to S3, add excerpt, set start_date, enable cron, Day 1 begins
+- **Everything is public** — prompts, resolutions, analysis, Body's code — all visible on `/stage`
+- **Tailwind v4 colors** — always use arbitrary hex values, never named color classes

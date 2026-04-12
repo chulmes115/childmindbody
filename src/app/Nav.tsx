@@ -8,7 +8,7 @@ const TABS = [
   { href: '/stage',          label: 'childmindbody'     },
   { href: '/gallery',        label: 'imperfect gallery'  },
   { href: '/read',           label: "Mind's ruminations" },
-  { href: '/bodys-message',  label: "Body's message"     },
+  { href: '/bodys-message',  label: "Body's dream"       },
   // { href: '/next-project', label: 'next project' },
 ]
 

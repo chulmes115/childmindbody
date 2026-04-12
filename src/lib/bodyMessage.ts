@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { s3, BUCKET } from './s3'
-import { EXCERPT_WORDS, EXCERPT_WORD_COUNT, WORDS_PER_CYCLE } from './excerpt'
+import { STORY_WORDS, STORY_WORD_COUNT, WORDS_PER_CYCLE } from './excerpt'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const openai    = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -16,13 +16,13 @@ export function getChunk(wordPosition: number): {
   nextPosition: number
   cycleLabel: string
 } {
-  const endPos  = Math.min(wordPosition + WORDS_PER_CYCLE, EXCERPT_WORD_COUNT)
-  const chunk   = EXCERPT_WORDS.slice(0, endPos).join(' ')
-  const isReset = endPos >= EXCERPT_WORD_COUNT
+  const endPos  = Math.min(wordPosition + WORDS_PER_CYCLE, STORY_WORD_COUNT)
+  const chunk   = STORY_WORDS.slice(0, endPos).join(' ')
+  const isReset = endPos >= STORY_WORD_COUNT
   return {
     chunk,
     nextPosition: isReset ? 0 : endPos,
-    cycleLabel:   `words 1–${endPos} of ${EXCERPT_WORD_COUNT}${isReset ? ' (resetting)' : ''}`,
+    cycleLabel:   `words 1–${endPos} of ${STORY_WORD_COUNT}${isReset ? ' (resetting)' : ''}`,
   }
 }
 
