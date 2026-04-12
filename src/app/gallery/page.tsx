@@ -88,7 +88,10 @@ export default function Gallery() {
   }
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-stone-50">
+    <div
+      className="relative w-screen h-screen overflow-hidden"
+      style={{ background: 'linear-gradient(to bottom, #0052ff 0%, #a8d4ff 100%)' }}
+    >
 
       {/* Floating images */}
       {images.map((img, i) => (
@@ -119,7 +122,7 @@ export default function Gallery() {
       ))}
 
       {images.length === 0 && (
-        <p className="absolute inset-0 flex items-center justify-center text-stone-300 text-sm">
+        <p className="absolute inset-0 flex items-center justify-center text-white/40 text-sm">
           no images yet
         </p>
       )}
@@ -127,7 +130,7 @@ export default function Gallery() {
       {/* Upload form — fixed bottom-right */}
       <form
         onSubmit={handleUpload}
-        className="fixed bottom-6 right-6 flex items-center gap-3 bg-white/80 backdrop-blur border border-stone-200 rounded-full px-4 py-2 shadow-sm z-50"
+        className="fixed bottom-6 right-6 flex items-center gap-3 bg-white/20 backdrop-blur border border-white/30 rounded-full px-4 py-2 z-50"
         style={{ fontFamily: 'var(--font-geist-sans)' }}
       >
         <input
@@ -135,17 +138,17 @@ export default function Gallery() {
           type="file"
           name="image"
           accept="image/*"
-          className="text-xs text-stone-500 file:mr-2 file:text-xs file:border-0 file:bg-transparent file:text-stone-400 file:cursor-pointer"
+          className="text-xs text-white/70 file:mr-3 file:text-xs file:border-0 file:bg-transparent file:text-white/30 file:cursor-pointer"
         />
         <button
           type="submit"
           disabled={uploading}
-          className="text-xs text-stone-500 hover:text-stone-800 disabled:opacity-40 transition-colors whitespace-nowrap"
+          className="text-xs text-white/70 hover:text-white/90 disabled:opacity-40 transition-colors whitespace-nowrap"
         >
           {uploading ? 'processing…' : 'add circle'}
         </button>
         {uploadError && (
-          <span className="text-xs text-red-400">{uploadError}</span>
+          <span className="text-xs text-red-400/70">{uploadError}</span>
         )}
       </form>
 
