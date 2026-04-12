@@ -97,7 +97,7 @@ ${intakeData || '[No responses.]'}`
 
   const msg = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 900,
+    max_tokens: 1500,
     system: [
       { type: 'text', text: MIND_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
     ],
