@@ -1,40 +1,47 @@
+import { cookies } from 'next/headers'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { s3, BUCKET } from '@/lib/s3'
 import { saveInspirationImage } from '@/lib/db'
 import { analyzeInspirationImage } from '@/lib/bodyMessage'
 
+export const maxDuration = 60
+
 export async function POST(request: Request) {
-  const formData = await request.formData()
-  const file = formData.get('image') as File | null
-  if (!file) return Response.json({ error: 'No image provided' }, { status: 400 })
+  // Admin-only — inspiration images are Olin's personal artwork
+  const store = await cookies()
+  if (store.get('cmb_admin')?.value !== process.env.ADMIN_SECRET)
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  if (file.size > 10 * 1024 * 1024)
-    return Response.json({ error: 'File too large (max 10 MB)' }, { status: 413 })
-
-  const buffer    = Buffer.from(await file.arrayBuffer())
-  const timestamp = new Date().toISOString()
-  const ext       = file.name.split('.').pop() ?? 'jpg'
-  const key       = `inspiration/${Date.now()}.${ext}`
-  const region    = process.env.AWS_REGION ?? 'us-east-2'
-
-  await s3.send(new PutObjectCommand({
-    Bucket:      BUCKET,
-    Key:         key,
-    Body:        buffer,
-    ContentType: file.type || 'image/jpeg',
-  }))
-
-  const url = `https://${BUCKET}.s3.${region}.amazonaws.com/${key}`
-
-  let analysis: string
   try {
-    analysis = await analyzeInspirationImage(url)
+    const formData = await request.formData()
+    const file = formData.get('image') as File | null
+    if (!file) return Response.json({ error: 'No image provided' }, { status: 400 })
+
+    if (file.size > 10 * 1024 * 1024)
+      return Response.json({ error: 'File too large (max 10 MB)' }, { status: 413 })
+
+    const buffer    = Buffer.from(await file.arrayBuffer())
+    const timestamp = new Date().toISOString()
+    const ext       = file.name.split('.').pop() ?? 'jpg'
+    const key       = `inspiration/${Date.now()}.${ext}`
+    const region    = process.env.AWS_REGION ?? 'us-east-2'
+
+    await s3.send(new PutObjectCommand({
+      Bucket:      BUCKET,
+      Key:         key,
+      Body:        buffer,
+      ContentType: file.type || 'image/jpeg',
+    }))
+
+    const url      = `https://${BUCKET}.s3.${region}.amazonaws.com/${key}`
+    const analysis = await analyzeInspirationImage(url)
+
+    // Save to DB only after both S3 and analysis succeed — no orphaned records
+    await saveInspirationImage({ url, analysis, filename: file.name, timestamp })
+
+    return Response.json({ ok: true, url, analysis })
   } catch (err) {
-    console.error('analyzeInspirationImage failed:', err)
-    return Response.json({ error: 'Image uploaded but analysis failed — try again' }, { status: 500 })
+    console.error('[bodys-message/upload]', err)
+    return Response.json({ error: err instanceof Error ? err.message : 'Upload failed' }, { status: 500 })
   }
-
-  await saveInspirationImage({ url, analysis, filename: file.name, timestamp })
-
-  return Response.json({ ok: true, url, analysis })
 }

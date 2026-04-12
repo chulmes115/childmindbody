@@ -9,6 +9,15 @@ import {
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const MODEL = 'claude-haiku-4-5-20251001'
 
+// Safe text extractor — guards against unexpected Claude response types
+function extractText(msg: Anthropic.Message): string {
+  const block = msg.content[0]
+  if (!block || block.type !== 'text') {
+    throw new Error(`Unexpected Claude response type: ${block?.type ?? 'empty'} (stop_reason: ${msg.stop_reason})`)
+  }
+  return block.text.trim()
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type ChildContext = {
@@ -52,7 +61,7 @@ ${ctx.bodyCurrentCode || '[Nothing is displayed yet.]'}`
     ],
     messages: [{ role: 'user', content: context }],
   })
-  const resolution = (resolutionMsg.content[0] as Anthropic.TextBlock).text.trim()
+  const resolution = extractText(resolutionMsg)
 
   // Call 2: body direction — always returns a definitive answer
   const bodyMsg = await anthropic.messages.create({
@@ -68,7 +77,7 @@ ${ctx.bodyCurrentCode || '[Nothing is displayed yet.]'}`
       },
     ],
   })
-  const bodyDirection = (bodyMsg.content[0] as Anthropic.TextBlock).text.trim()
+  const bodyDirection = extractText(bodyMsg)
 
   return { resolution, bodyDirection }
 }
@@ -95,7 +104,7 @@ ${intakeData || '[No responses.]'}`
     messages: [{ role: 'user', content: userMessage }],
   })
 
-  const raw = (msg.content[0] as Anthropic.TextBlock).text.trim()
+  const raw = extractText(msg)
 
   // Extract recommendation from final line
   const lines = raw.split('\n')
@@ -123,7 +132,7 @@ export async function runBody(prompt: string): Promise<string> {
     messages: [{ role: 'user', content: prompt }],
   })
 
-  const raw = (msg.content[0] as Anthropic.TextBlock).text.trim()
+  const raw = extractText(msg)
 
   // Strip markdown fences if Body wrapped its output anyway
   return raw.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/, '').trim()
@@ -143,5 +152,5 @@ export async function condenseIntake(rawText: string): Promise<string> {
       },
     ],
   })
-  return (msg.content[0] as Anthropic.TextBlock).text.trim()
+  return extractText(msg)
 }

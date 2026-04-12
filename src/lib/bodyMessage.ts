@@ -61,7 +61,9 @@ Return ONLY the image generation prompt. No preamble, no explanation.`
     messages: [{ role: 'user', content }],
   })
 
-  return (msg.content[0] as Anthropic.TextBlock).text.trim()
+  const block = msg.content[0]
+  if (!block || block.type !== 'text') throw new Error(`Unexpected Claude response type: ${block?.type ?? 'empty'}`)
+  return block.text.trim()
 }
 
 // ─── DALL-E 3: generate image, download, store in S3 ─────────────────────────
@@ -108,7 +110,9 @@ export async function analyzeInspirationImage(imageUrl: string): Promise<string>
       ],
     }],
   })
-  return (msg.content[0] as Anthropic.TextBlock).text.trim()
+  const block = msg.content[0]
+  if (!block || block.type !== 'text') throw new Error(`Unexpected Claude response type: ${block?.type ?? 'empty'}`)
+  return block.text.trim()
 }
 
 // ─── Main cycle step ──────────────────────────────────────────────────────────

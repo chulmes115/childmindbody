@@ -37,21 +37,19 @@ export async function POST(request: Request) {
   if (file.size > 10 * 1024 * 1024)
     return Response.json({ error: 'File too large (max 10 MB)' }, { status: 413 })
 
-  const buffer = Buffer.from(await file.arrayBuffer())
-  const processed = await processImage(buffer)
+  try {
+    const buffer    = Buffer.from(await file.arrayBuffer())
+    const processed = await processImage(buffer)
+    const key       = `enso/submitted/${Date.now()}.png`
+    const region    = process.env.AWS_REGION ?? 'us-east-2'
 
-  const key = `enso/submitted/${Date.now()}.png`
-  const region = process.env.AWS_REGION ?? 'us-east-2'
+    await s3.send(new PutObjectCommand({
+      Bucket: BUCKET, Key: key, Body: processed, ContentType: 'image/png',
+    }))
 
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      Body: processed,
-      ContentType: 'image/png',
-    })
-  )
-
-  const url = `https://${BUCKET}.s3.${region}.amazonaws.com/${key}`
-  return Response.json({ ok: true, url })
+    return Response.json({ ok: true, url: `https://${BUCKET}.s3.${region}.amazonaws.com/${key}` })
+  } catch (err) {
+    console.error('[gallery/upload]', err)
+    return Response.json({ error: 'Upload failed' }, { status: 500 })
+  }
 }
