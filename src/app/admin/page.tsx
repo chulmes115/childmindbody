@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { getMeta, getCurrentCycleId, getCycleRecord, getInspirationImages } from '@/lib/db'
-import { login, logout } from './actions'
+import { login, logout, seedBodyCode } from './actions'
 import DecisionButtons from './DecisionButtons'
 import TriggerCycle from './TriggerCycle'
 import InspirationUpload from '@/app/bodys-message/InspirationUpload'
@@ -80,7 +80,17 @@ export default async function AdminPage() {
         <section>
           <div className="flex items-baseline justify-between mb-8">
             <h2 className="text-xs tracking-widest uppercase text-white/30">Current Cycle</h2>
-            <TriggerCycle />
+            <div className="flex items-center gap-4">
+              <form action={seedBodyCode}>
+                <button
+                  type="submit"
+                  className="text-xs text-white/25 border border-white/10 px-3 py-1.5 rounded hover:text-white/45 hover:border-white/25 transition-colors"
+                >
+                  seed body
+                </button>
+              </form>
+              <TriggerCycle />
+            </div>
           </div>
 
           {!currentRecord ? (
