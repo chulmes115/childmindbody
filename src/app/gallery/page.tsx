@@ -34,8 +34,10 @@ export default function Gallery() {
   const [compliment,      setCompliment]      = useState<string | null>(null)
   const [complimentCount, setComplimentCount] = useState(0)
 
-  const [uploading,   setUploading]   = useState(false)
-  const [uploadError, setUploadError] = useState('')
+  const [uploading,    setUploading]    = useState(false)
+  const [uploadError,  setUploadError]  = useState('')
+  const [uploadCount,  setUploadCount]  = useState<number | null>(null)
+  const [maxPerCycle,  setMaxPerCycle]  = useState(10)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // ── Layout from URLs (no fetch — called on load and resize) ───────────────
@@ -82,6 +84,9 @@ export default function Gallery() {
     const urls: string[] = data.images ?? []
     rawUrlsRef.current = urls
     layoutImages(urls, newUrl)
+
+    if (data.uploadCount !== undefined) setUploadCount(data.uploadCount)
+    if (data.maxPerCycle !== undefined) setMaxPerCycle(data.maxPerCycle)
 
     if (newUrl) {
       setArrivingUrl(newUrl)
@@ -143,6 +148,7 @@ export default function Gallery() {
           setComplimentCount(0)
         }, 1200)
       }
+      setUploadCount((c) => (c !== null ? c + 1 : null))
       await fetchGalleryData(data.url)
       if (fileRef.current) fileRef.current.value = ''
     } else {
@@ -260,16 +266,21 @@ export default function Gallery() {
 
       {/* Upload — top right */}
       <div
-        className="fixed z-50"
+        className="fixed z-50 flex flex-col items-end gap-1.5"
         style={{ top: '56px', right: '20px', fontFamily: 'var(--font-geist-sans)' }}
       >
         <button
           onClick={() => { setUploadError(''); fileRef.current?.click() }}
-          disabled={uploading}
+          disabled={uploading || (uploadCount !== null && uploadCount >= maxPerCycle)}
           className="text-xs text-white/80 bg-white/15 backdrop-blur border border-white/30 px-4 py-2 rounded-full hover:bg-white/25 hover:text-white transition-all disabled:opacity-40"
         >
-          {uploading ? 'processing…' : '+ add circle'}
+          {uploading ? 'processing…' : uploadCount !== null && uploadCount >= maxPerCycle ? 'gallery full' : '+ add circle'}
         </button>
+        {uploadCount !== null && (
+          <p className="text-white/45 text-[10px] text-right" style={{ textShadow: '0 1px 6px rgba(0,10,80,0.8)' }}>
+            {uploadCount} / {maxPerCycle} circles this cycle
+          </p>
+        )}
         <input
           ref={fileRef}
           type="file"
