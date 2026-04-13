@@ -5,6 +5,7 @@ import DecisionButtons from './DecisionButtons'
 import TriggerCycle from './TriggerCycle'
 import CondenseDisquiet from './CondenseDisquiet'
 import OlinAdmin from './OlinAdmin'
+import GalleryAdmin from './GalleryAdmin'
 import InspirationUpload from '@/app/bodys-dream/InspirationUpload'
 
 export const dynamic = 'force-dynamic'
@@ -212,6 +213,15 @@ export default async function AdminPage() {
         <section>
           <h2 className="text-xs tracking-widest uppercase text-white/30 mb-6">Olin</h2>
           <OlinAdmin initialMessages={olinMessages} initialWatermarks={olinWatermarks} />
+        </section>
+
+        {/* Gallery — circle uploads */}
+        <section>
+          <h2 className="text-xs tracking-widest uppercase text-white/30 mb-6">Gallery</h2>
+          <p className="text-white/20 text-xs mb-6">
+            Hover any circle to reveal a delete button.
+          </p>
+          <GalleryAdmin />
         </section>
 
         {/* Inspiration — Body's message reference art */}
