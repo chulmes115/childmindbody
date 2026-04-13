@@ -10,10 +10,28 @@ export default function InspirationUpload({
   initial: InspirationImage[]
   showUpload?: boolean
 }) {
-  const [images, setImages]     = useState<InspirationImage[]>(initial)
+  const [images, setImages]       = useState<InspirationImage[]>(initial)
   const [uploading, setUploading] = useState(false)
   const [error, setError]         = useState('')
+  const [deleting, setDeleting]   = useState<string | null>(null)
   const fileRef                   = useRef<HTMLInputElement>(null)
+
+  async function handleDelete(img: InspirationImage) {
+    if (!confirm(`Delete ${img.filename}?`)) return
+    setDeleting(img.timestamp)
+    try {
+      const res = await fetch('/api/admin/inspiration', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timestamp: img.timestamp, url: img.url }),
+      })
+      if ((await res.json()).ok) {
+        setImages((prev) => prev.filter((i) => i.timestamp !== img.timestamp))
+      }
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   async function resizeImage(file: File, maxPx = 1400): Promise<Blob> {
     return new Promise((resolve, reject) => {
@@ -100,6 +118,15 @@ export default function InspirationUpload({
               <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity rounded p-3 overflow-y-auto">
                 <p className="text-white/60 text-xs leading-relaxed">{img.analysis}</p>
               </div>
+              {showUpload && (
+                <button
+                  onClick={() => handleDelete(img)}
+                  disabled={deleting === img.timestamp}
+                  className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white/50 hover:text-white/90 text-[10px] px-1.5 py-0.5 rounded disabled:opacity-30"
+                >
+                  {deleting === img.timestamp ? '…' : '✕'}
+                </button>
+              )}
             </div>
           ))}
         </div>

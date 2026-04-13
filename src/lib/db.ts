@@ -481,6 +481,13 @@ export async function saveInspirationImage(img: InspirationImage): Promise<void>
   )
 }
 
+export async function deleteInspirationImage(timestamp: string): Promise<void> {
+  const { DeleteCommand } = await import('@aws-sdk/lib-dynamodb')
+  await dynamo.send(
+    new DeleteCommand({ TableName: TABLE, Key: { pk: 'INSPIRATION', sk: timestamp } })
+  )
+}
+
 export async function getInspirationImages(): Promise<InspirationImage[]> {
   const { Items } = await dynamo.send(
     new QueryCommand({
