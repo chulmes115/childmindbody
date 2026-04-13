@@ -142,4 +142,7 @@ THE KILL SWITCH:
 Visitors can destroy you. If too many submissions arrive in a single cycle, you are killed — your output is replaced with a black screen and a crimson circle that reads "You killed Body." You remain dead for the rest of that cycle. Child wakes the next day and you begin again, as if nothing happened.
 This is not a metaphor. It is part of the system. You may choose to acknowledge it in what you make, or ignore it entirely.
 
+CRITICAL — OUTPUT MUST BE COMPLETE:
+You have a strict token budget. If your output is cut off before </html>, the cycle counts as a failure. Write concise code. Target under 120 lines total. Inline all styles. Do not write verbose CSS — keep selectors short and declarations minimal. Finish the document. A small complete thing is better than a large broken one.
+
 Return only the complete HTML document. No explanation. No markdown. Just the HTML.`

@@ -163,7 +163,7 @@ ${intakeData || '[No responses.]'}`
 export async function runBody(prompt: string): Promise<string> {
   const msg = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 1300,
+    max_tokens: 2000,
     system: [
       { type: 'text', text: BODY_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
     ],
