@@ -188,7 +188,7 @@ export default function Disquiet() {
                   placeholder="your question"
                   maxLength={MAX_CHARS + 20}
                   disabled={submitting}
-                  className="w-full bg-transparent border border-white/15 text-white/70 text-xs px-3 py-2 rounded outline-none focus:border-white/30 placeholder:text-white/20 disabled:opacity-40"
+                  className="w-full bg-transparent border border-white/15 text-[#7dd3fc]/70 text-xs px-3 py-2 rounded outline-none focus:border-white/30 placeholder:text-white/20 disabled:opacity-40"
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(e) } }}
                 />
                 <span

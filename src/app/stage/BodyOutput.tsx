@@ -46,7 +46,11 @@ export default function BodyOutput({
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`text-xs transition-colors ${
-                tab === t.id
+                t.id === 'wounds'
+                  ? tab === t.id
+                    ? 'text-[#7dd3fc]/80 underline underline-offset-4'
+                    : 'text-[#7dd3fc]/30 hover:text-[#7dd3fc]/55'
+                  : tab === t.id
                   ? 'text-white/80 underline underline-offset-4'
                   : 'text-white/30 hover:text-white/55'
               }`}
@@ -84,7 +88,7 @@ export default function BodyOutput({
                   <span className="text-white/20 text-xs pt-0.5 shrink-0 tabular-nums">
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <span className="text-white/65 text-sm leading-relaxed">
+                  <span className="text-[#7dd3fc]/65 text-sm leading-relaxed">
                     {parseResponse(raw)}
                   </span>
                 </li>
