@@ -49,6 +49,11 @@ body {
   to { stroke-dashoffset: 0 }
 }
 
+@keyframes float-msg {
+  0%   { transform: translate(0, 0) }
+  100% { transform: translate(var(--fdx), var(--fdy)) }
+}
+
 .scrollbar-none {
   scrollbar-width: none;
 }

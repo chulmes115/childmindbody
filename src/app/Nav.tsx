@@ -41,7 +41,7 @@ export default function Nav() {
           </Link>
 
           {/* Desktop tabs — centered, hidden on mobile */}
-          <div className="hidden md:flex flex-1 items-center justify-center gap-10">
+          <div className="hidden md:flex flex-1 items-center justify-center gap-6">
             {TABS.map(({ href, label }) => (
               <Link
                 key={href}

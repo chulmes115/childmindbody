@@ -113,10 +113,11 @@ export default function Olin() {
         inset:      0,
         background: '#000',
         overflow:   'hidden',
+        fontFamily: 'var(--font-geist-mono)',
       }}
     >
 
-      {/* Solid crimson fill — grows slightly slower than the ring */}
+      {/* Solid crimson disc — slightly slower than streaks (1350s vs 1200s) */}
       <div
         style={{
           position:      'absolute',
@@ -126,11 +127,11 @@ export default function Olin() {
           width:         '4px',
           height:        '4px',
           borderRadius:  '50%',
-          background:    'rgba(148, 0, 22, 0.22)',
+          background:    '#8b0016',
           pointerEvents: 'none',
           zIndex:        1,
           animationName:           'olin-circle',
-          animationDuration:       '1380s',
+          animationDuration:       '1350s',
           animationTimingFunction: 'linear',
           animationFillMode:       'forwards',
         } as React.CSSProperties}
@@ -217,10 +218,13 @@ export default function Olin() {
         ) : null
       )}
 
-      {/* Journal messages — scattered, appearing one by one */}
+      {/* Journal messages — scattered, fade in, then float gently */}
       {messages.map((msg, i) => {
-        const pos = msgPositions.current[i] ?? getMsgPos(i)
+        const pos     = msgPositions.current[i] ?? getMsgPos(i)
         const visible = i < visibleCount
+        const fdx     = `${(Math.sin(i * 3.71) * 0.5) * 14}px`
+        const fdy     = `${(Math.cos(i * 5.13) * 0.5) * 10}px`
+        const dur     = 10 + Math.abs(Math.sin(i * 2.31)) * 8  // 10–18s
         return (
           <div
             key={msg.timestamp}
@@ -230,19 +234,30 @@ export default function Olin() {
               top:        `${pos.y}%`,
               maxWidth:   '160px',
               zIndex:     10 + i,
-              color:      'rgba(110, 170, 255, 0.92)',
-              fontSize:   '11px',
-              fontFamily: 'var(--font-geist-mono)',
-              lineHeight: '1.5',
-              wordBreak:  'break-word',
-              textShadow: '0 0 10px rgba(0,0,0,1), 0 0 20px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,1)',
               opacity:    visible ? 1 : 0,
-              transform:  visible ? 'none' : 'translateY(5px)',
-              transition: 'opacity 2.5s ease, transform 2.5s ease',
+              transition: 'opacity 2.5s ease',
               pointerEvents: 'none',
             }}
           >
-            {msg.text}
+            {/* Inner div handles the float — only starts once visible */}
+            <div
+              style={{
+                color:      'rgba(110, 170, 255, 0.92)',
+                fontSize:   '11px',
+                lineHeight: '1.5',
+                wordBreak:  'break-word',
+                textShadow: '0 0 10px rgba(0,0,0,1), 0 0 20px rgba(0,0,0,0.9)',
+                '--fdx': fdx,
+                '--fdy': fdy,
+                animationName:           visible ? 'float-msg' : 'none',
+                animationDuration:       `${dur}s`,
+                animationTimingFunction: 'ease-in-out',
+                animationIterationCount: 'infinite',
+                animationDirection:      'alternate',
+              } as React.CSSProperties}
+            >
+              {msg.text}
+            </div>
           </div>
         )
       })}
