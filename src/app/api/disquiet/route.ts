@@ -6,6 +6,8 @@ import {
   saveDisquietMessage,
   getDisquietMemory,
 } from '@/lib/db'
+
+// Messages persist across cycles — only the per-cycle count resets
 import { runDisquiet } from '@/lib/agents'
 
 export const maxDuration = 60
@@ -16,7 +18,7 @@ const MAX_CHARS     = 50
 export async function GET() {
   const cycleId = await getCurrentCycleId()
   const [messages, count] = await Promise.all([
-    getDisquietMessages(cycleId),
+    getDisquietMessages(),
     getDisquietCount(cycleId),
   ])
   return Response.json({
@@ -59,7 +61,7 @@ export async function POST(request: Request) {
     }
 
     const [history, memory] = await Promise.all([
-      getDisquietMessages(cycleId),
+      getDisquietMessages(),
       getDisquietMemory(),
     ])
 

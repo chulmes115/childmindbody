@@ -251,12 +251,12 @@ export type DisquietMessage = {
   timestamp: string
 }
 
-export async function getDisquietMessages(cycleId: number): Promise<DisquietMessage[]> {
+export async function getDisquietMessages(): Promise<DisquietMessage[]> {
   const { Items } = await dynamo.send(
     new QueryCommand({
       TableName: TABLE,
       KeyConditionExpression: 'pk = :pk',
-      ExpressionAttributeValues: { ':pk': `DISQUIET_CONVO#${cycleId}` },
+      ExpressionAttributeValues: { ':pk': 'DISQUIET_CONVO' },
       ScanIndexForward: true,
     })
   )
@@ -276,9 +276,30 @@ export async function saveDisquietMessage(
   await dynamo.send(
     new PutCommand({
       TableName: TABLE,
-      Item: { pk: `DISQUIET_CONVO#${cycleId}`, sk: ts, role, text },
+      Item: { pk: 'DISQUIET_CONVO', sk: ts, role, text, cycle_id: cycleId },
     })
   )
+}
+
+export async function clearDisquietMessages(): Promise<void> {
+  const { Items } = await dynamo.send(
+    new QueryCommand({
+      TableName: TABLE,
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': 'DISQUIET_CONVO' },
+      ProjectionExpression: 'sk',
+    })
+  )
+  if (!Items || Items.length === 0) return
+
+  const { BatchWriteCommand } = await import('@aws-sdk/lib-dynamodb')
+  // DynamoDB batch write limit is 25 items per request
+  for (let i = 0; i < Items.length; i += 25) {
+    const batch = Items.slice(i, i + 25).map((item) => ({
+      DeleteRequest: { Key: { pk: 'DISQUIET_CONVO', sk: item.sk as string } },
+    }))
+    await dynamo.send(new BatchWriteCommand({ RequestItems: { [TABLE]: batch } }))
+  }
 }
 
 export async function getDisquietCount(cycleId: number): Promise<number> {

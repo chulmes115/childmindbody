@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import {
   getCurrentCycleId,
   getDisquietMessages,
+  clearDisquietMessages,
   getDisquietMemory,
   saveDisquietMemory,
 } from '@/lib/db'
@@ -15,7 +16,7 @@ async function assertAdmin() {
     throw new Error('Unauthorized')
 }
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     await assertAdmin()
   } catch {
@@ -23,10 +24,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { cycleId: requestedCycleId } = await request.json() as { cycleId?: number }
-    const cycleId = requestedCycleId ?? (await getCurrentCycleId())
+    const cycleId = await getCurrentCycleId()
 
-    const messages = await getDisquietMessages(cycleId)
+    // Condense the full conversation (persists across cycles until now)
+    const messages = await getDisquietMessages()
     if (messages.length === 0) {
       return Response.json({ done: true, skipped: true, reason: 'No messages to summarize' })
     }
@@ -45,11 +46,16 @@ export async function POST(request: Request) {
       : `Cycle ${cycleId}: ${summary}`
 
     const final = appended.length > 2000 ? appended.slice(-2000) : appended
-    await saveDisquietMemory(final)
+
+    // Save memory and clear the conversation — this is the explicit reset
+    await Promise.all([
+      saveDisquietMemory(final),
+      clearDisquietMessages(),
+    ])
 
     return Response.json({ done: true, summary, cycleId })
   } catch (err) {
     console.error('[admin/disquiet/condense]', err)
-    return Response.json({ error: err instanceof Error ? err.message : 'Failed' }, { status: 500 })
+    return Response.json({ error: 'Internal error' }, { status: 500 })
   }
 }
