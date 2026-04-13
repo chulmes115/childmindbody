@@ -1,4 +1,4 @@
-import { getMeta, getCurrentBodyCode, getCurrentCycleId, getCycleRecord, getIntakeResponses } from '@/lib/db'
+import { getMeta, getCurrentBodyCode, getCurrentCycleId, getCycleRecord, getIntakeEntries } from '@/lib/db'
 import { CHILD_SYSTEM_PROMPT, MIND_SYSTEM_PROMPT, BODY_SYSTEM_PROMPT } from '@/lib/prompts'
 import BodyOutput from './BodyOutput'
 
@@ -21,7 +21,7 @@ export default async function Stage() {
 
   const [currentRecord, intakeResponses] = await Promise.all([
     cycleId > 0 ? getCycleRecord(cycleId) : Promise.resolve(null),
-    cycleId > 0 ? getIntakeResponses(cycleId) : Promise.resolve([]),
+    cycleId > 0 ? getIntakeEntries(cycleId) : Promise.resolve([]),
   ])
 
   const childFails = (consecutiveFails as number) ?? 0

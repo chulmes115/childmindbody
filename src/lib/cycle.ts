@@ -8,6 +8,8 @@ import {
   getCurrentBodyCode,
   saveBodyCode,
   getIntakeResponses,
+  countRealIntakeResponses,
+  saveHateWound,
   getBodyMessageStatus,
   saveBodyMessageStatus,
   getInspirationImages,
@@ -51,6 +53,25 @@ export async function runCycle(): Promise<CycleResult> {
 
   const priorAnalysis = priorRecord?.mind_analysis ?? ''
   const olinNote = priorRecord?.olin_note
+
+  // ── Step 1.5: Hate wound punishment ─────────────────────────────────────────
+  // If no real visitors responded last cycle, inject stacked hate wounds into
+  // the new cycle's intake. Reset the count when someone actually responds.
+  if (!isFirstRun) {
+    const [realCount, prevWounds] = await Promise.all([
+      countRealIntakeResponses(lastCycleId),
+      getMeta('hate_wound_count'),
+    ])
+    if (realCount === 0) {
+      const newWoundCount = ((prevWounds as number) ?? 0) + 1
+      await setMeta('hate_wound_count', newWoundCount)
+      await Promise.all(
+        Array.from({ length: newWoundCount }, (_, i) => saveHateWound(newCycleId, i))
+      )
+    } else {
+      await setMeta('hate_wound_count', 0)
+    }
+  }
 
   // ── Step 2: Run Child ───────────────────────────────────────────────────────
   const childResult = await runChild({

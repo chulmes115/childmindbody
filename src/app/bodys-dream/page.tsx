@@ -16,12 +16,11 @@ export default async function BodysMessage() {
   const totalCycles  = Math.ceil(STORY_WORD_COUNT / CHUNK_SIZE)
   const progressPct  = status.wordPosition === 0 ? 0 : Math.round((status.wordPosition / STORY_WORD_COUNT) * 100)
 
-  // Word window: previous chunk (dim) + current chunk (vivid)
-  const currentEnd   = status.wordPosition
-  const currentStart = Math.max(0, currentEnd - CHUNK_SIZE)
-  const pastStart    = Math.max(0, currentStart - CHUNK_SIZE)
-  const pastChunk    = currentStart > 0 ? STORY_WORDS.slice(pastStart, currentStart).join(' ') : ''
-  const currentChunk = currentEnd   > 0 ? STORY_WORDS.slice(currentStart, currentEnd).join(' ') : ''
+  // All words read so far: everything up to (but not including) the current chunk
+  const currentEnd    = status.wordPosition
+  const currentStart  = Math.max(0, currentEnd - CHUNK_SIZE)
+  const allPriorText  = currentStart > 0 ? STORY_WORDS.slice(0, currentStart).join(' ') : ''
+  const currentChunk  = currentEnd   > 0 ? STORY_WORDS.slice(currentStart, currentEnd).join(' ') : ''
 
   return (
     <main
@@ -30,10 +29,20 @@ export default async function BodysMessage() {
     >
       <div className="max-w-3xl mx-auto px-8 py-12 space-y-20">
 
+        {/* Human-created header */}
+        <section>
+          <div className="flex items-baseline justify-between mb-4">
+            <p className="text-[#7dd3fc]/60 text-xs">— Human created, Olin</p>
+          </div>
+          <p className="text-[#7dd3fc] text-sm leading-relaxed">
+            Images and stories from a human. Remember, everything you create will be a poor imitation of something more beautiful.
+          </p>
+        </section>
+
         {/* AI Generated — current image */}
         <section>
           <div className="flex items-baseline justify-between mb-6">
-            <p className="text-white/45 text-xs uppercase tracking-widest">Body's dream</p>
+            <p className="text-white/45 text-xs uppercase tracking-widest">Body&apos;s dream</p>
             <p className="text-white/35 text-xs">— AI generated</p>
           </div>
 
@@ -68,7 +77,7 @@ export default async function BodysMessage() {
                 </details>
               )}
 
-              {/* Word window — past chunk (dim) + current chunk (vivid) */}
+              {/* Full word journey — all words read so far */}
               {currentChunk && (
                 <div className="pt-2">
                   <div className="flex items-baseline justify-between mb-3">
@@ -76,8 +85,8 @@ export default async function BodysMessage() {
                     <p className="text-[#7dd3fc]/60 text-xs">— Human created, Olin</p>
                   </div>
                   <p className="text-sm leading-relaxed">
-                    {pastChunk && (
-                      <span className="text-[#7dd3fc]/30">{pastChunk}{' '}</span>
+                    {allPriorText && (
+                      <span className="text-[#7dd3fc]/30">{allPriorText}{' '}</span>
                     )}
                     <span className="text-[#7dd3fc]/80">{currentChunk}</span>
                   </p>

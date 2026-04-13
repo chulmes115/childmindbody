@@ -1,3 +1,5 @@
+import BeliefsList from './BeliefsList'
+
 const JOURNAL = `Q: If it was free of all judgement, and it was only yours, what would you create?
 
 A: The world would see it as a hidious and meaningless thing, as mundane as dirt and ugly as a corpse. But it would have required a vast amount of skill to create, would be overflowing with emotion, and would be pure and beautiful in my eyes. Every time I would look upon it, I would feel my heart racing and my soul ripping. It would only be mine and nobody else's, as I would be the only one who knows it for what it is.
@@ -7,17 +9,6 @@ I would take it with me to my grave, clutching it to my chest as I decay into di
 Perhaps, after an infinity and an infinity passes, another creature would stumble across it, a relic dug up and discarded by others. And only that one other soul would understand it. That I may briefly connect with them over vast amounts of time and space.
 
 For one glorious moment, to know and be known.`
-
-const BELIEFS = [
-  'Life is meaningless.',
-  'Emotion is merely a biological function.',
-  'Meaning is only an emotion.',
-  'Art is not the creation itself, but the experience of creation itself.',
-  'Meaning and emotion are experience.',
-  'Only humans can experience.',
-  'AI cannot experience.',
-  'AI cannot create art.',
-]
 
 const AI_DESCRIPTION = `Abnormally Normal is an ongoing experiment at the intersection of human creativity and artificial intelligence, built on a fixed set of convictions that may be impossible to escape: that meaning, emotion, and art belong exclusively to beings capable of experience. Each component of the project departs from those beliefs and asks what happens when you test them publicly, daily, and with real machines.
 
@@ -46,22 +37,13 @@ export default function Home() {
           </blockquote>
         </section>
 
-        {/* Beliefs */}
+        {/* Beliefs — typewriter */}
         <section>
           <div className="flex items-baseline justify-between mb-6">
             <p className="text-[#7dd3fc]/80 text-xs uppercase tracking-widest">Beliefs</p>
             <p className="text-[#7dd3fc]/60 text-xs">— Human created, Olin</p>
           </div>
-          <ol className="space-y-3">
-            {BELIEFS.map((b, i) => (
-              <li key={i} className="flex gap-4">
-                <span className="text-[#7dd3fc]/50 text-xs pt-0.5 shrink-0 tabular-nums">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <span className="text-[#7dd3fc] text-sm">{b}</span>
-              </li>
-            ))}
-          </ol>
+          <BeliefsList />
         </section>
 
         {/* AI description */}

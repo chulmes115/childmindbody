@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { getCurrentCycleId, getCycleRecord, getMeta, setMeta, getCurrentBodyCode, saveCycleRecord, countIntakeResponses } from '@/lib/db'
+import { getCurrentCycleId, getCycleRecord, getMeta, setMeta, getCurrentBodyCode, saveCycleRecord, countRealIntakeResponses, saveHateWound } from '@/lib/db'
 import { runChild } from '@/lib/agents'
 
 export const maxDuration = 60
@@ -40,13 +40,23 @@ export async function POST() {
         return today
       })()
 
-    // Zero-intake penalty: if last cycle collected no responses, count as a code failure
+    // Zero-intake penalty + hate wound punishment
     let effectiveCodeFails = (codeFailCount as number) ?? 0
     if (!isFirstRun) {
-      const intakeCount = await countIntakeResponses(lastCycleId)
-      if (intakeCount === 0) {
+      const [realCount, prevWounds] = await Promise.all([
+        countRealIntakeResponses(lastCycleId),
+        getMeta('hate_wound_count'),
+      ])
+      if (realCount === 0) {
         effectiveCodeFails += 1
         await setMeta('code_fail_count', effectiveCodeFails)
+        const newWoundCount = ((prevWounds as number) ?? 0) + 1
+        await setMeta('hate_wound_count', newWoundCount)
+        await Promise.all(
+          Array.from({ length: newWoundCount }, (_, i) => saveHateWound(newCycleId, i))
+        )
+      } else {
+        await setMeta('hate_wound_count', 0)
       }
     }
 

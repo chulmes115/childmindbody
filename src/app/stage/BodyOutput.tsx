@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import type { IntakeEntry } from '@/lib/db'
 
 function parseResponse(raw: string): string {
   try {
@@ -22,7 +23,7 @@ export default function BodyOutput({
 }: {
   html: string
   bodyDirection?: string
-  intakeResponses?: string[]
+  intakeResponses?: IntakeEntry[]
 }) {
   const [tab, setTab] = useState<'output' | 'code' | 'wounds'>('output')
 
@@ -83,13 +84,13 @@ export default function BodyOutput({
             <p className="text-white/25 text-sm italic">No responses collected this cycle.</p>
           ) : (
             <ol className="space-y-3">
-              {intakeResponses.map((raw, i) => (
+              {intakeResponses.map((entry, i) => (
                 <li key={i} className="flex gap-4">
-                  <span className="text-white/20 text-xs pt-0.5 shrink-0 tabular-nums">
+                  <span className={`text-xs pt-0.5 shrink-0 tabular-nums ${entry.isWound ? 'text-[#8b0016]/50' : 'text-white/20'}`}>
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <span className="text-[#7dd3fc]/65 text-sm leading-relaxed">
-                    {parseResponse(raw)}
+                  <span className={`text-sm leading-relaxed ${entry.isWound ? 'text-[#8b0016]/80' : 'text-[#7dd3fc]/65'}`}>
+                    {entry.isWound ? entry.text : parseResponse(entry.text)}
                   </span>
                 </li>
               ))}

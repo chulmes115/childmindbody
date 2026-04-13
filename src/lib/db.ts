@@ -14,6 +14,7 @@ export type MetaKey =
   | 'mind_fail_count'
   | 'codebase_resets'
   | 'start_date'
+  | 'hate_wound_count'
 
 export type CycleRecord = {
   id: number
@@ -163,6 +164,57 @@ export async function countIntakeResponses(cycleId: number): Promise<number> {
     })
   )
   return Count ?? 0
+}
+
+// Counts only real visitor responses — excludes hate wound records
+export async function countRealIntakeResponses(cycleId: number): Promise<number> {
+  const { Count } = await dynamo.send(
+    new QueryCommand({
+      TableName: TABLE,
+      KeyConditionExpression: 'pk = :pk',
+      FilterExpression: 'attribute_not_exists(wound)',
+      ExpressionAttributeValues: { ':pk': `INTAKE#${cycleId}` },
+      Select: 'COUNT',
+    })
+  )
+  return Count ?? 0
+}
+
+export type IntakeEntry = {
+  text:    string
+  isWound: boolean
+}
+
+export async function getIntakeEntries(cycleId: number): Promise<IntakeEntry[]> {
+  const { Items } = await dynamo.send(
+    new QueryCommand({
+      TableName: TABLE,
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': `INTAKE#${cycleId}` },
+    })
+  )
+  return (Items ?? []).map((item) => ({
+    text:    item.response as string,
+    isWound: !!(item.wound as boolean),
+  }))
+}
+
+// Saves an Olin hate wound into the cycle's intake — appears in the wounds tab
+export async function saveHateWound(cycleId: number, index: number = 0): Promise<void> {
+  // Add index offset so wounds get unique sk values even if called in rapid succession
+  const ts = new Date(Date.now() + index).toISOString()
+  await dynamo.send(
+    new PutCommand({
+      TableName: TABLE,
+      Item: {
+        pk:        `INTAKE#${cycleId}`,
+        sk:        ts,
+        response:  "I'm sorry, but i do really hate you",
+        timestamp: ts,
+        wound:     true,
+      },
+    })
+  )
 }
 
 // ─── Body's Message state ─────────────────────────────────────────────────────
