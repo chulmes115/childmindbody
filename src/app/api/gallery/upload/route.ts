@@ -2,13 +2,19 @@ import { NextResponse } from 'next/server'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import Anthropic from '@anthropic-ai/sdk'
 import sharp from 'sharp'
+import { createHash } from 'node:crypto'
 import { s3, BUCKET } from '@/lib/s3'
-import { getCurrentCycleId, getGalleryUploadCount, incrementGalleryUploadCount, saveGalleryCompliment } from '@/lib/db'
+import { getCurrentCycleId, getGalleryUploadCount, incrementGalleryUploadCount, saveGalleryCompliment, getCooldown, setCooldown } from '@/lib/db'
 
-const MAX_PER_CYCLE   = 10
-const COOLDOWN_MS     = 2 * 60 * 1000
-const COOLDOWN_COOKIE = 'gallery_cd'
-const MODEL           = 'claude-haiku-4-5-20251001'
+const MAX_PER_CYCLE = 10
+const COOLDOWN_MS   = 2 * 60 * 1000
+const MODEL         = 'claude-haiku-4-5-20251001'
+
+function getIpHash(request: Request): string {
+  const forwarded = request.headers.get('x-forwarded-for')
+  const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown'
+  return createHash('sha256').update(ip).digest('hex').slice(0, 16)
+}
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -68,11 +74,11 @@ async function generateCompliment(imageBuffer: Buffer, mimeType: string): Promis
 }
 
 export async function POST(request: Request) {
-  // ── Per-visitor cooldown ─────────────────────────────────────────────────────
-  const cookieHeader = request.headers.get('cookie') ?? ''
-  const cdMatch = cookieHeader.match(new RegExp(`(?:^|;\\s*)${COOLDOWN_COOKIE}=(\\d+)`))
-  if (cdMatch) {
-    const elapsed = Date.now() - parseInt(cdMatch[1])
+  // ── Per-visitor cooldown (server-side, keyed by IP hash) ─────────────────────
+  const ipHash  = getIpHash(request)
+  const lastAt  = await getCooldown('gallery', ipHash)
+  if (lastAt !== null) {
+    const elapsed = Date.now() - lastAt
     if (elapsed < COOLDOWN_MS) {
       const remaining = Math.ceil((COOLDOWN_MS - elapsed) / 60000)
       return NextResponse.json(
@@ -121,17 +127,11 @@ export async function POST(request: Request) {
     await Promise.all([
       incrementGalleryUploadCount(cycleId),
       saveGalleryCompliment(compliment),
+      setCooldown('gallery', ipHash, Date.now()),
     ])
 
     const imageUrl = `https://${BUCKET}.s3.${region}.amazonaws.com/${key}`
-    const res = NextResponse.json({ ok: true, url: imageUrl, compliment })
-    res.cookies.set(COOLDOWN_COOKIE, String(Date.now()), {
-      maxAge: COOLDOWN_MS / 1000,
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-    })
-    return res
+    return NextResponse.json({ ok: true, url: imageUrl, compliment })
 
   } catch (err) {
     console.error('[gallery/upload]', err)

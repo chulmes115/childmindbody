@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createHash } from 'node:crypto'
 import {
   getCurrentCycleId,
   getCycleRecord,
@@ -6,12 +7,19 @@ import {
   countIntakeResponses,
   saveBodyCode,
   saveCycleRecord,
+  getCooldown,
+  setCooldown,
 } from '@/lib/db'
 
-const MAX_LENGTH         = 500   // chars per submission
-const COOLDOWN_MS        = 10 * 60 * 1000   // 10 minutes between submissions
-const MAX_PER_CYCLE      = 25   // kill switch threshold
-const COOLDOWN_COOKIE    = 'intake_cd'
+const MAX_LENGTH    = 500              // chars per submission
+const COOLDOWN_MS   = 10 * 60 * 1000  // 10 minutes between submissions
+const MAX_PER_CYCLE = 25              // kill switch threshold
+
+function getIpHash(request: Request): string {
+  const forwarded = request.headers.get('x-forwarded-for')
+  const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown'
+  return createHash('sha256').update(ip).digest('hex').slice(0, 16)
+}
 
 const KILLED_HTML = `<!DOCTYPE html>
 <html>
@@ -56,11 +64,11 @@ export async function POST(request: Request) {
         { status: 429 }
       )
 
-    // ── Cooldown — 10 minutes between submissions per visitor ────────────────
-    const cookieHeader = request.headers.get('cookie') ?? ''
-    const cdMatch = cookieHeader.match(new RegExp(`(?:^|;\\s*)${COOLDOWN_COOKIE}=(\\d+)`))
-    if (cdMatch) {
-      const elapsed = Date.now() - parseInt(cdMatch[1])
+    // ── Cooldown — 10 minutes between submissions per visitor (server-side) ────
+    const ipHash = getIpHash(request)
+    const lastAt = await getCooldown('intake', ipHash)
+    if (lastAt !== null) {
+      const elapsed = Date.now() - lastAt
       if (elapsed < COOLDOWN_MS) {
         const remaining = Math.ceil((COOLDOWN_MS - elapsed) / 60000)
         return NextResponse.json(
@@ -107,15 +115,9 @@ export async function POST(request: Request) {
       ])
     }
 
-    // ── Set cooldown cookie ──────────────────────────────────────────────────
-    const res = NextResponse.json({ ok: true, ...(killed ? { killed: true } : {}) })
-    res.cookies.set(COOLDOWN_COOKIE, String(Date.now()), {
-      maxAge: COOLDOWN_MS / 1000,
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-    })
-    return res
+    // ── Record cooldown server-side ──────────────────────────────────────────
+    await setCooldown('intake', ipHash, Date.now())
+    return NextResponse.json({ ok: true, ...(killed ? { killed: true } : {}) })
 
   } catch (err) {
     console.error('[intake]', err)

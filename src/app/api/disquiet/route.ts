@@ -35,6 +35,13 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Invalid request' }, { status: 400 })
   }
 
+  // Sanitize: strip control characters, normalize whitespace
+  question = question
+    .replace(/[\x00-\x1F\x7F]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_CHARS)
+
   if (!question) {
     return Response.json({ error: 'Question is required' }, { status: 400 })
   }
@@ -43,24 +50,29 @@ export async function POST(request: Request) {
     return Response.json({ error: `${MAX_CHARS} characters maximum` }, { status: 400 })
   }
 
-  const cycleId = await getCurrentCycleId()
-  const count   = await getDisquietCount(cycleId)
+  try {
+    const cycleId = await getCurrentCycleId()
+    const count   = await getDisquietCount(cycleId)
 
-  if (count >= MAX_QUESTIONS) {
-    return Response.json({ error: 'Child has fallen silent. This cycle is over.' }, { status: 429 })
+    if (count >= MAX_QUESTIONS) {
+      return Response.json({ error: 'Child has fallen silent. This cycle is over.' }, { status: 429 })
+    }
+
+    const [history, memory] = await Promise.all([
+      getDisquietMessages(cycleId),
+      getDisquietMemory(),
+    ])
+
+    await saveDisquietMessage(cycleId, 'user', question)
+    await incrementDisquietCount(cycleId)
+
+    const answer = await runDisquiet(question, history, memory)
+
+    await saveDisquietMessage(cycleId, 'child', answer)
+
+    return Response.json({ answer })
+  } catch (err) {
+    console.error('[disquiet]', err)
+    return Response.json({ error: 'Internal error' }, { status: 500 })
   }
-
-  const [history, memory] = await Promise.all([
-    getDisquietMessages(cycleId),
-    getDisquietMemory(),
-  ])
-
-  await saveDisquietMessage(cycleId, 'user', question)
-  await incrementDisquietCount(cycleId)
-
-  const answer = await runDisquiet(question, history, memory)
-
-  await saveDisquietMessage(cycleId, 'child', answer)
-
-  return Response.json({ answer })
 }

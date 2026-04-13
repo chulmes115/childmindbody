@@ -373,6 +373,22 @@ export async function saveOlinWatermark(slot: 1 | 2 | 3, url: string): Promise<v
   )
 }
 
+// ─── Per-visitor cooldown (server-side, keyed by IP hash) ────────────────────
+// pk='COOLDOWN'  sk='${type}#${ipHash}'  →  { last_at: number }
+
+export async function getCooldown(type: string, ipHash: string): Promise<number | null> {
+  const { Item } = await dynamo.send(
+    new GetCommand({ TableName: TABLE, Key: { pk: 'COOLDOWN', sk: `${type}#${ipHash}` } })
+  )
+  return Item ? (Item.last_at as number) : null
+}
+
+export async function setCooldown(type: string, ipHash: string, ts: number): Promise<void> {
+  await dynamo.send(
+    new PutCommand({ TableName: TABLE, Item: { pk: 'COOLDOWN', sk: `${type}#${ipHash}`, last_at: ts } })
+  )
+}
+
 // ─── Inspiration images ───────────────────────────────────────────────────────
 // pk='INSPIRATION'  sk='<timestamp>'  →  { url, analysis, filename }
 

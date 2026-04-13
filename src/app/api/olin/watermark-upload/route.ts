@@ -49,6 +49,13 @@ export async function POST(request: Request) {
     if (!file) return Response.json({ error: 'No image' }, { status: 400 })
     if (![1, 2, 3].includes(slot)) return Response.json({ error: 'Invalid slot' }, { status: 400 })
 
+    const ALLOWED_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp'])
+    if (!ALLOWED_MIME.has(file.type))
+      return Response.json({ error: 'Only JPEG, PNG, or WebP images are accepted.' }, { status: 415 })
+
+    if (file.size > 10 * 1024 * 1024)
+      return Response.json({ error: 'File too large (max 10 MB)' }, { status: 413 })
+
     const buffer = Buffer.from(await file.arrayBuffer())
     const processed = await processWatermark(buffer)
     const key = `olin-watermarks/${slot}.png`

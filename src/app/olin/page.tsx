@@ -131,7 +131,7 @@ export default function Olin() {
           pointerEvents: 'none',
           zIndex:        1,
           animationName:           'olin-circle',
-          animationDuration:       '1350s',
+          animationDuration:       '2400s',
           animationTimingFunction: 'linear',
           animationFillMode:       'forwards',
         } as React.CSSProperties}
