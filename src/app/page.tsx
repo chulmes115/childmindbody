@@ -85,7 +85,7 @@ export default function Home() {
             <img
               src="/instagram-qr.png"
               alt="Instagram QR code — @FAR_TOO_NORMAL"
-              className="w-24 h-24 object-contain rounded"
+              className="w-52 h-52 object-contain rounded"
             />
             <a
               href="https://www.instagram.com/far_too_normal"

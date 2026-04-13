@@ -16,7 +16,7 @@ const STREAK_PARAMS = Array.from({ length: STREAK_COUNT }, (_, i) => {
     opacity:        0.3 + Math.abs(Math.sin(i * 1.618)) * 0.5,
     width:          0.6 + Math.abs(Math.sin(i * 2.236)) * 2.4,
     lengthFraction: 0.4 + Math.abs(Math.sin(i * 3.14)) * 0.6,
-    delaySec:       Math.abs(Math.sin(i * 4.66)) * 10,
+    delaySec:       Math.abs(Math.sin(i * 4.66)) * 2,
   }
 })
 
@@ -92,7 +92,7 @@ export default function Olin() {
     ? STREAK_PARAMS.map((p) => {
         const rad = p.angleDeg * (Math.PI / 180)
         const diag = Math.sqrt(viewport.w * viewport.w + viewport.h * viewport.h)
-        const len  = (diag / 2) * p.lengthFraction
+        const len  = diag * p.lengthFraction
         return {
           x1:       viewport.w / 2,
           y1:       viewport.h / 2,
