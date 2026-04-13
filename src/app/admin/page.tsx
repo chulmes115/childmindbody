@@ -5,7 +5,7 @@ import DecisionButtons from './DecisionButtons'
 import TriggerCycle from './TriggerCycle'
 import CondenseDisquiet from './CondenseDisquiet'
 import OlinAdmin from './OlinAdmin'
-import InspirationUpload from '@/app/bodys-message/InspirationUpload'
+import InspirationUpload from '@/app/bodys-dream/InspirationUpload'
 
 export const dynamic = 'force-dynamic'
 
