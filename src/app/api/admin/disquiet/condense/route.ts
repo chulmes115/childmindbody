@@ -1,12 +1,5 @@
 import { cookies } from 'next/headers'
-import {
-  getCurrentCycleId,
-  getDisquietMessages,
-  clearDisquietMessages,
-  getDisquietMemory,
-  saveDisquietMemory,
-} from '@/lib/db'
-import { summarizeDisquietConversation } from '@/lib/agents'
+import { triggerDisquietDeath } from '@/lib/agents'
 
 export const maxDuration = 60
 
@@ -16,6 +9,8 @@ async function assertAdmin() {
     throw new Error('Unauthorized')
 }
 
+// Manual reset of Child's disquiet — kills Child, writes the curated memory,
+// wipes the conversation. Same death event the 4,000-char threshold triggers.
 export async function POST() {
   try {
     await assertAdmin()
@@ -24,36 +19,13 @@ export async function POST() {
   }
 
   try {
-    const cycleId = await getCurrentCycleId()
+    const result = await triggerDisquietDeath()
 
-    // Condense the full conversation (persists across cycles until now)
-    const messages = await getDisquietMessages()
-    if (messages.length === 0) {
-      return Response.json({ done: true, skipped: true, reason: 'No messages to summarize' })
+    if (!result.died) {
+      return Response.json({ done: true, skipped: true, reason: 'No conversation to summarize' })
     }
 
-    const [summary, existingMemory] = await Promise.all([
-      summarizeDisquietConversation(messages),
-      getDisquietMemory(),
-    ])
-
-    if (!summary) {
-      return Response.json({ done: true, skipped: true, reason: 'Summary was empty' })
-    }
-
-    const appended = existingMemory
-      ? `${existingMemory}\n\nCycle ${cycleId}: ${summary}`
-      : `Cycle ${cycleId}: ${summary}`
-
-    const final = appended.length > 2000 ? appended.slice(-2000) : appended
-
-    // Save memory and clear the conversation — this is the explicit reset
-    await Promise.all([
-      saveDisquietMemory(final),
-      clearDisquietMessages(),
-    ])
-
-    return Response.json({ done: true, summary, cycleId })
+    return Response.json({ done: true, deathCount: result.deathCount })
   } catch (err) {
     console.error('[admin/disquiet/condense]', err)
     return Response.json({ error: 'Internal error' }, { status: 500 })

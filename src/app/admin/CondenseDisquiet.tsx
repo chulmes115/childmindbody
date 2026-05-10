@@ -17,10 +17,10 @@ export default function CondenseDisquiet({ cycleId }: { cycleId: number }) {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ cycleId }),
       })
-      const data = await res.json() as { done?: boolean; skipped?: boolean; reason?: string; summary?: string; error?: string }
+      const data = await res.json() as { done?: boolean; skipped?: boolean; reason?: string; deathCount?: number; error?: string }
       if (data.error) throw new Error(data.error)
-      if (data.skipped) setResult(data.reason ?? 'nothing to summarize')
-      else              setResult('condensed — reload to see memory')
+      if (data.skipped) setResult(data.reason ?? 'no conversation to wipe')
+      else              setResult(`Child died — death #${data.deathCount}. reload to see new memory.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'unknown error')
     } finally {
@@ -35,7 +35,7 @@ export default function CondenseDisquiet({ cycleId }: { cycleId: number }) {
         disabled={running}
         className="text-xs text-white/50 border border-white/20 px-3 py-1.5 rounded hover:text-white/75 hover:border-white/40 transition-colors disabled:opacity-30"
       >
-        {running ? 'summarizing…' : 'condense memory'}
+        {running ? 'killing…' : 'kill child (reset)'}
       </button>
       {result && <span className="text-xs text-white/30">{result}</span>}
       {error  && <span className="text-xs text-red-400/60">error: {error}</span>}

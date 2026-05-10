@@ -9,6 +9,8 @@ import {
   saveCycleRecord,
   getCooldown,
   setCooldown,
+  bumpCounter,
+  deleteWoundEntries,
 } from '@/lib/db'
 
 const MAX_LENGTH    = 500              // chars per submission
@@ -106,12 +108,15 @@ export async function POST(request: Request) {
     const count = await countIntakeResponses(cycleId)
 
     // ── Kill switch — threshold reached ─────────────────────────────────────
+    // body_deaths uses an atomic ADD so concurrent kills can't lose a death.
     let killed = false
     if (count >= MAX_PER_CYCLE) {
       killed = true
       await Promise.all([
         saveBodyCode(KILLED_HTML),
         saveCycleRecord({ id: cycleId, intake_killed: true, body_code: KILLED_HTML }),
+        bumpCounter('body_deaths'),
+        deleteWoundEntries(cycleId),
       ])
     }
 

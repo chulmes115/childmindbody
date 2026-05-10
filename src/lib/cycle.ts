@@ -3,8 +3,12 @@ import {
   incrementCycleId,
   getCycleRecord,
   saveCycleRecord,
-  getMeta,
-  setMeta,
+  getCounter,
+  setCounter,
+  bumpCounter,
+  getStartDate,
+  setStartDate,
+  getProjectStatus,
   getCurrentBodyCode,
   saveBodyCode,
   getIntakeResponses,
@@ -32,22 +36,22 @@ export async function runCycle(): Promise<CycleResult> {
   const newCycleId = lastCycleId + 1
   const isFirstRun = lastCycleId === 0
 
-  const [priorRecord, consecutiveFails, codeFailCount, codebaseResets, startDateMeta, bodyCode] =
+  const [priorRecord, consecutiveFails, codeFailCount, codebaseResets, existingStartDate, bodyCode] =
     await Promise.all([
       isFirstRun ? Promise.resolve(null) : getCycleRecord(lastCycleId),
-      getMeta('consecutive_fails'),
-      getMeta('code_fail_count'),
-      getMeta('codebase_resets'),
-      getMeta('start_date'),
+      getCounter('consecutive_fails'),
+      getCounter('code_fail_count'),
+      getCounter('codebase_resets'),
+      getStartDate(),
       getCurrentBodyCode(),
     ])
 
   // On first run, record the start date
   const startDate =
-    (startDateMeta as string | null) ??
+    existingStartDate ??
     (() => {
       const today = new Date().toISOString().split('T')[0]
-      setMeta('start_date', today) // fire-and-forget, intentional
+      setStartDate(today) // fire-and-forget, intentional
       return today
     })()
 
@@ -60,37 +64,41 @@ export async function runCycle(): Promise<CycleResult> {
   if (!isFirstRun) {
     const [realCount, prevWounds] = await Promise.all([
       countRealIntakeResponses(lastCycleId),
-      getMeta('hate_wound_count'),
+      getCounter('hate_wound_count'),
     ])
     if (realCount === 0) {
-      const newWoundCount = ((prevWounds as number) ?? 0) + 1
-      await setMeta('hate_wound_count', newWoundCount)
+      const newWoundCount = prevWounds + 1
+      await setCounter('hate_wound_count', newWoundCount)
       await Promise.all(
         Array.from({ length: newWoundCount }, (_, i) => saveHateWound(newCycleId, i))
       )
     } else {
-      await setMeta('hate_wound_count', 0)
+      await setCounter('hate_wound_count', 0)
     }
   }
+
+  // ── Step 1.7: Fetch full project snapshot for Child's context ───────────────
+  const snapshot = await getProjectStatus(newCycleId)
 
   // ── Step 2: Run Child ───────────────────────────────────────────────────────
   const childResult = await runChild({
     startDate,
-    consecutiveFails: (consecutiveFails as number) ?? 0,
-    codeFailCount: (codeFailCount as number) ?? 0,
-    codebaseResets: (codebaseResets as number) ?? 0,
+    consecutiveFails,
+    codeFailCount,
+    codebaseResets,
     priorAnalysis,
     bodyCurrentCode: bodyCode ?? '',
     olinNote,
+    snapshot,
   })
 
   await saveCycleRecord({
     id: newCycleId,
     child_resolution: childResult.resolution,
     body_direction: childResult.bodyDirection,
-    consecutive_failures: (consecutiveFails as number) ?? 0,
-    code_fail_count: (codeFailCount as number) ?? 0,
-    reset_count: (codebaseResets as number) ?? 0,
+    consecutive_failures: consecutiveFails,
+    code_fail_count: codeFailCount,
+    reset_count: codebaseResets,
   })
 
   // ── Step 3: Run Body if Child directed it to change ─────────────────────────
@@ -101,10 +109,11 @@ export async function runCycle(): Promise<CycleResult> {
     if (bodyCode && bodyCode.length > 8000) {
       await Promise.all([
         saveBodyCode(''),
-        setMeta('codebase_resets', ((codebaseResets as number) ?? 0) + 1),
+        bumpCounter('codebase_resets'),
       ])
     }
-    const newBodyCode = await runBody(childResult.bodyDirection)
+    const bodyDeaths = await getCounter('body_deaths')
+    const newBodyCode = await runBody(childResult.bodyDirection, bodyDeaths)
     await Promise.all([
       saveBodyCode(newBodyCode),
       saveCycleRecord({ id: newCycleId, body_code: newBodyCode }),
@@ -127,12 +136,14 @@ export async function runCycle(): Promise<CycleResult> {
 
   // Mind's failures: increments when recommendation is not 'fail' (pass or null)
   if (mindResult.recommendation !== 'fail') {
-    const current = ((await getMeta('mind_fail_count')) as number) ?? 0
-    await setMeta('mind_fail_count', current + 1)
+    await bumpCounter('mind_fail_count')
   }
 
   // ── Step 5: Increment cycle counter ────────────────────────────────────────
   await incrementCycleId()
+
+  // Disquiet conversation now persists across cycles. It is wiped only when
+  // Child dies (conversation > 4,000 chars or manual reset). No per-cycle action.
 
   // ── Step 6: Body's Message — image generation ───────────────────────────────
   const [bodyMsgStatus, inspirationImages] = await Promise.all([

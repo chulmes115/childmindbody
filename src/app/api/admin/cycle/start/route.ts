@@ -1,5 +1,17 @@
 import { cookies } from 'next/headers'
-import { getCurrentCycleId, getCycleRecord, getMeta, setMeta, getCurrentBodyCode, saveCycleRecord, countRealIntakeResponses, saveHateWound } from '@/lib/db'
+import {
+  getCurrentCycleId,
+  getCycleRecord,
+  getCounter,
+  setCounter,
+  getStartDate,
+  setStartDate,
+  getProjectStatus,
+  getCurrentBodyCode,
+  saveCycleRecord,
+  countRealIntakeResponses,
+  saveHateWound,
+} from '@/lib/db'
 import { runChild } from '@/lib/agents'
 
 export const maxDuration = 60
@@ -22,61 +34,65 @@ export async function POST() {
     const newCycleId  = lastCycleId + 1
     const isFirstRun  = lastCycleId === 0
 
-    const [priorRecord, consecutiveFails, codeFailCount, codebaseResets, startDateMeta, bodyCode] =
+    const [priorRecord, consecutiveFails, codeFailCount, codebaseResets, existingStartDate, bodyCode] =
       await Promise.all([
         isFirstRun ? Promise.resolve(null) : getCycleRecord(lastCycleId),
-        getMeta('consecutive_fails'),
-        getMeta('code_fail_count'),
-        getMeta('codebase_resets'),
-        getMeta('start_date'),
+        getCounter('consecutive_fails'),
+        getCounter('code_fail_count'),
+        getCounter('codebase_resets'),
+        getStartDate(),
         getCurrentBodyCode(),
       ])
 
     const startDate =
-      (startDateMeta as string | null) ??
+      existingStartDate ??
       (() => {
         const today = new Date().toISOString().split('T')[0]
-        setMeta('start_date', today) // fire-and-forget, intentional
+        setStartDate(today) // fire-and-forget, intentional
         return today
       })()
 
     // Zero-intake penalty + hate wound punishment
-    let effectiveCodeFails = (codeFailCount as number) ?? 0
+    let effectiveCodeFails = codeFailCount
     if (!isFirstRun) {
       const [realCount, prevWounds] = await Promise.all([
         countRealIntakeResponses(lastCycleId),
-        getMeta('hate_wound_count'),
+        getCounter('hate_wound_count'),
       ])
       if (realCount === 0) {
         effectiveCodeFails += 1
-        await setMeta('code_fail_count', effectiveCodeFails)
-        const newWoundCount = ((prevWounds as number) ?? 0) + 1
-        await setMeta('hate_wound_count', newWoundCount)
+        await setCounter('code_fail_count', effectiveCodeFails)
+        const newWoundCount = prevWounds + 1
+        await setCounter('hate_wound_count', newWoundCount)
         await Promise.all(
           Array.from({ length: newWoundCount }, (_, i) => saveHateWound(newCycleId, i))
         )
       } else {
-        await setMeta('hate_wound_count', 0)
+        await setCounter('hate_wound_count', 0)
       }
     }
 
+    // Snapshot is read AFTER any counter mutations above so it reflects current state.
+    const snapshot = await getProjectStatus(newCycleId)
+
     const { resolution, bodyDirection } = await runChild({
       startDate,
-      consecutiveFails: (consecutiveFails as number) ?? 0,
+      consecutiveFails,
       codeFailCount:    effectiveCodeFails,
-      codebaseResets:   (codebaseResets   as number) ?? 0,
+      codebaseResets,
       priorAnalysis:    priorRecord?.mind_analysis ?? '',
       bodyCurrentCode:  bodyCode ?? '',
       olinNote:         priorRecord?.olin_note,
+      snapshot,
     })
 
     await saveCycleRecord({
       id:                  newCycleId,
       child_resolution:    resolution,
       body_direction:      bodyDirection,
-      consecutive_failures: (consecutiveFails as number) ?? 0,
+      consecutive_failures: consecutiveFails,
       code_fail_count:     effectiveCodeFails,
-      reset_count:         (codebaseResets   as number) ?? 0,
+      reset_count:         codebaseResets,
     })
 
     return Response.json({ newCycleId, resolution, bodyDirection, isFirstRun })

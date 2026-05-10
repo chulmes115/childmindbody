@@ -158,7 +158,7 @@ export default function Olin() {
         } as React.CSSProperties}
       />
 
-      {/* Sun streaks SVG */}
+      {/* Sun streaks SVG — behind the disc/ring so they don't show through it */}
       {viewport && (
         <svg
           style={{
@@ -168,7 +168,7 @@ export default function Olin() {
             width:         '100%',
             height:        '100%',
             pointerEvents: 'none',
-            zIndex:        1,
+            zIndex:        0,
           }}
           viewBox={`0 0 ${viewport.w} ${viewport.h}`}
           preserveAspectRatio="none"

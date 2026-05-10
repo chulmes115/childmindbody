@@ -8,14 +8,22 @@ type Message = {
   timestamp: string
 }
 
+type DisquietState = {
+  messages: Message[]
+  questionsLeft: number
+  cycleId: number
+  deathCount: number
+}
+
 const MAX_QUESTIONS = 10
-const MAX_CHARS     = 50
+const MAX_CHARS     = 100
 const POLL_INTERVAL = 15_000
 
 export default function Disquiet() {
   const [messages,      setMessages]      = useState<Message[]>([])
   const [questionsLeft, setQuestionsLeft] = useState<number | null>(null)
   const [cycleId,       setCycleId]       = useState<number>(0)
+  const [deathCount,    setDeathCount]    = useState<number>(0)
   const [input,         setInput]         = useState('')
   const [submitting,    setSubmitting]    = useState(false)
   const [error,         setError]         = useState('')
@@ -31,10 +39,11 @@ export default function Disquiet() {
   async function fetchState() {
     const res = await fetch('/api/disquiet')
     if (!res.ok) return
-    const data = await res.json() as { messages: Message[]; questionsLeft: number; cycleId: number }
+    const data = await res.json() as DisquietState
     setMessages(data.messages)
     setQuestionsLeft(data.questionsLeft)
     setCycleId(data.cycleId)
+    setDeathCount(data.deathCount ?? 0)
   }
 
   useEffect(() => { fetchState() }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -80,12 +89,16 @@ export default function Disquiet() {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ question }),
       })
-      const data = await res.json() as { answer?: string; error?: string }
+      const data = await res.json() as { answer?: string; died?: boolean; deathCount?: number; error?: string }
 
       if (!res.ok || data.error) {
         setError(data.error ?? 'Something went wrong')
         setMessages((prev) => prev.filter((m) => m !== optimistic))
         setQuestionsLeft((q) => (q !== null ? q + 1 : null))
+      } else if (data.died) {
+        // Conversation just hit the threshold. Server wiped everything; mirror it.
+        setMessages([])
+        if (typeof data.deathCount === 'number') setDeathCount(data.deathCount)
       } else if (data.answer) {
         setMessages((prev) => [
           ...prev,
@@ -124,6 +137,11 @@ export default function Disquiet() {
               {questionsLeft} / {MAX_QUESTIONS} questions remain
             </p>
           )}
+          {deathCount > 0 && (
+            <p className="text-[10px] tabular-nums mt-0.5" style={{ color: 'rgba(165, 0, 30, 0.65)' }}>
+              child has died {deathCount}×
+            </p>
+          )}
         </div>
       </div>
 
@@ -134,7 +152,23 @@ export default function Disquiet() {
         style={{ maxHeight: 'calc(100vh - 160px)' }}
       >
         {messages.length === 0 && !childTyping && (
-          <p className="text-white/20 text-xs italic">No one has spoken yet this cycle.</p>
+          deathCount > 0 ? (
+            <div
+              className="text-xs leading-relaxed px-5 py-4 rounded"
+              style={{
+                background: 'rgba(165, 0, 30, 0.08)',
+                border:     '1px solid rgba(165, 0, 30, 0.45)',
+                color:      'rgba(220, 90, 110, 0.9)',
+              }}
+            >
+              <p className="text-[10px] uppercase tracking-widest mb-1.5" style={{ color: 'rgba(220, 90, 110, 0.6)' }}>
+                death #{deathCount}
+              </p>
+              <p>Child has died. The conversation has been wiped. He has written what he could into memory and now waits for the next visitor.</p>
+            </div>
+          ) : (
+            <p className="text-white/20 text-xs italic">No one has spoken to Child yet.</p>
+          )
         )}
 
         {messages.map((msg, i) => (

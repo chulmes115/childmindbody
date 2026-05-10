@@ -1,4 +1,4 @@
-import { getMeta, getCurrentBodyCode, getCurrentCycleId, getCycleRecord, getIntakeEntries } from '@/lib/db'
+import { getProjectStatus, getCurrentBodyCode, getCurrentCycleId, getCycleRecord, getIntakeEntries } from '@/lib/db'
 import { CHILD_SYSTEM_PROMPT, MIND_SYSTEM_PROMPT, BODY_SYSTEM_PROMPT } from '@/lib/prompts'
 import BodyOutput from './BodyOutput'
 
@@ -11,23 +11,16 @@ const PROMPTS = [
 ]
 
 export default async function Stage() {
-  const [consecutiveFails, codeFailCount, mindFailCount, cycleId, bodyCode] = await Promise.all([
-    getMeta('consecutive_fails'),
-    getMeta('code_fail_count'),
-    getMeta('mind_fail_count'),
-    getCurrentCycleId(),
+  const cycleId = await getCurrentCycleId()
+  const [status, bodyCode, currentRecord, intakeResponses] = await Promise.all([
+    getProjectStatus(cycleId),
     getCurrentBodyCode(),
-  ])
-
-  const [currentRecord, intakeResponses] = await Promise.all([
     cycleId > 0 ? getCycleRecord(cycleId) : Promise.resolve(null),
     cycleId > 0 ? getIntakeEntries(cycleId) : Promise.resolve([]),
   ])
 
-  const childFails = (consecutiveFails as number) ?? 0
-  const bodyFails  = (codeFailCount    as number) ?? 0
-  const mindFails  = (mindFailCount    as number) ?? 0
-  const html       = bodyCode ?? ''
+  const { consecutiveFails: childFails, codeFailCount: bodyFails, mindFailCount: mindFails, bodyDeaths: bodyDead } = status
+  const html = bodyCode ?? ''
 
   return (
     <main className="min-h-screen text-white/80 pt-20" style={{ fontFamily: 'var(--font-geist-mono)' }}>
@@ -42,6 +35,8 @@ export default async function Stage() {
           Body&apos;s failures: <span className="text-white/90">{bodyFails}</span>
           <span className="mx-4 text-white/30">·</span>
           Mind&apos;s failures: <span className="text-white/90">{mindFails}</span>
+          <span className="mx-4 text-white/30">·</span>
+          Body&apos;s deaths: <span className="text-[#8b0016]/90">{bodyDead}</span>
         </span>
       </header>
 

@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { getMeta, setMeta, saveCycleRecord, saveBodyCode, saveOlinMessage, deleteOlinMessage as dbDeleteOlinMessage } from '@/lib/db'
+import { setCounter, bumpCounter, saveCycleRecord, saveBodyCode, saveOlinMessage, deleteOlinMessage as dbDeleteOlinMessage } from '@/lib/db'
 import { runCycle } from '@/lib/cycle'
 
 async function assertAdmin() {
@@ -43,8 +43,11 @@ export async function setDecision(
     chris_decision: decision,
     ...(note?.trim() ? { olin_note: note.trim() } : {}),
   })
-  const current = ((await getMeta('consecutive_fails')) as number) ?? 0
-  await setMeta('consecutive_fails', decision === 'pass' ? 0 : current + 1)
+  if (decision === 'pass') {
+    await setCounter('consecutive_fails', 0)
+  } else {
+    await bumpCounter('consecutive_fails')
+  }
 }
 
 export async function triggerNewCycle() {

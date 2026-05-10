@@ -5,16 +5,21 @@ import {
   QueryCommand,
 } from '@aws-sdk/lib-dynamodb'
 import { dynamo, TABLE } from './dynamodb'
+import { EXCERPT_WORD_COUNT } from './excerpt'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type MetaKey =
+// Numeric META keys. Counters are stored at pk='META', sk=<key> with { value: number }.
+// Adding a new counter: append the key here, add a field to ProjectStatus, and add
+// it to getProjectStatus's parallel read. Nothing else.
+export type CounterKey =
   | 'consecutive_fails'
   | 'code_fail_count'
   | 'mind_fail_count'
   | 'codebase_resets'
-  | 'start_date'
   | 'hate_wound_count'
+  | 'body_deaths'
+  | 'disquiet_condense_count'
 
 export type CycleRecord = {
   id: number
@@ -32,20 +37,57 @@ export type CycleRecord = {
   intake_killed?: boolean
 }
 
-// ─── META counters ────────────────────────────────────────────────────────────
-// pk='META'  sk='{key}'  →  { value }
+// ─── META counters & start_date ──────────────────────────────────────────────
+// All META rows live at pk='META', sk=<key>. Counters are number-valued
+// (sk is a CounterKey). start_date is the one string-valued META row.
 
-export async function getMeta(key: MetaKey): Promise<string | number | null> {
+// Internal — used by both counter API and start_date helpers.
+async function _readMeta(key: string): Promise<string | number | null> {
   const { Item } = await dynamo.send(
     new GetCommand({ TableName: TABLE, Key: { pk: 'META', sk: key } })
   )
   return Item ? (Item.value as string | number) : null
 }
 
-export async function setMeta(key: MetaKey, value: string | number): Promise<void> {
+async function _writeMeta(key: string, value: string | number): Promise<void> {
   await dynamo.send(
     new PutCommand({ TableName: TABLE, Item: { pk: 'META', sk: key, value } })
   )
+}
+
+// Read a counter. Missing keys return 0.
+export async function getCounter(key: CounterKey): Promise<number> {
+  return ((await _readMeta(key)) as number) ?? 0
+}
+
+// Atomic increment via DynamoDB ADD. Race-safe under any concurrency.
+// Returns the new value after the increment.
+export async function bumpCounter(key: CounterKey, delta: number = 1): Promise<number> {
+  const { Attributes } = await dynamo.send(
+    new UpdateCommand({
+      TableName: TABLE,
+      Key: { pk: 'META', sk: key },
+      UpdateExpression: 'ADD #v :d',
+      ExpressionAttributeNames:  { '#v': 'value' },
+      ExpressionAttributeValues: { ':d': delta },
+      ReturnValues: 'UPDATED_NEW',
+    })
+  )
+  return (Attributes?.value as number) ?? 0
+}
+
+// Set a counter to an absolute value. Use for resets (e.g. consecutive_fails → 0).
+export async function setCounter(key: CounterKey, value: number): Promise<void> {
+  await _writeMeta(key, value)
+}
+
+// start_date — the one non-counter META key. Set once on first cycle, read everywhere.
+export async function getStartDate(): Promise<string | null> {
+  return (await _readMeta('start_date')) as string | null
+}
+
+export async function setStartDate(iso: string): Promise<void> {
+  await _writeMeta('start_date', iso)
 }
 
 // ─── Body code ────────────────────────────────────────────────────────────────
@@ -417,6 +459,19 @@ export async function saveOlinMessage(text: string): Promise<void> {
   )
 }
 
+export async function getLatestOlinMessage(): Promise<string | null> {
+  const { Items } = await dynamo.send(
+    new QueryCommand({
+      TableName: TABLE,
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': 'OLIN_MSG' },
+      ScanIndexForward: false,
+      Limit: 1,
+    })
+  )
+  return Items && Items.length > 0 ? (Items[0].text as string) : null
+}
+
 export async function deleteOlinMessage(timestamp: string): Promise<void> {
   const { DeleteCommand } = await import('@aws-sdk/lib-dynamodb')
   await dynamo.send(
@@ -444,6 +499,28 @@ export async function saveOlinWatermark(slot: 1 | 2 | 3, url: string): Promise<v
   await dynamo.send(
     new PutCommand({ TableName: TABLE, Item: { pk: 'OLIN_WM', sk: String(slot), url } })
   )
+}
+
+// Deletes all hate wound entries for a given cycle (called when Body is killed)
+export async function deleteWoundEntries(cycleId: number): Promise<void> {
+  const { Items } = await dynamo.send(
+    new QueryCommand({
+      TableName: TABLE,
+      KeyConditionExpression: 'pk = :pk',
+      FilterExpression: 'wound = :w',
+      ExpressionAttributeValues: { ':pk': `INTAKE#${cycleId}`, ':w': true },
+      ProjectionExpression: 'sk',
+    })
+  )
+  if (!Items || Items.length === 0) return
+
+  const { BatchWriteCommand } = await import('@aws-sdk/lib-dynamodb')
+  for (let i = 0; i < Items.length; i += 25) {
+    const batch = Items.slice(i, i + 25).map((item) => ({
+      DeleteRequest: { Key: { pk: `INTAKE#${cycleId}`, sk: item.sk as string } },
+    }))
+    await dynamo.send(new BatchWriteCommand({ RequestItems: { [TABLE]: batch } }))
+  }
 }
 
 // ─── Per-visitor cooldown (server-side, keyed by IP hash) ────────────────────
@@ -502,4 +579,71 @@ export async function getInspirationImages(): Promise<InspirationImage[]> {
     filename:  item.filename  as string,
     timestamp: item.sk        as string,
   }))
+}
+
+// ─── Project status — single entry point for "where is the project right now" ──
+// Any UI page or bot that needs current state asks one question: getProjectStatus(cycleId).
+
+export type ProjectStatus = {
+  cycleId:                 number
+  startDate:               string  // '' if not yet seeded (first cycle hasn't run)
+  consecutiveFails:        number
+  codeFailCount:           number
+  mindFailCount:           number
+  codebaseResets:          number
+  bodyDeaths:              number
+  hateWoundCount:          number
+  disquietCondenseCount:   number
+  disquietCount:           number  // questions asked this cycle
+  galleryUploadCount:      number  // uploads this cycle
+  bodyMessageWordPosition: number
+  totalWords:              number  // = EXCERPT_WORD_COUNT
+  latestOlinMessage:       string | null
+}
+
+export async function getProjectStatus(cycleId: number): Promise<ProjectStatus> {
+  const [
+    consecutiveFails,
+    codeFailCount,
+    mindFailCount,
+    codebaseResets,
+    bodyDeaths,
+    hateWoundCount,
+    disquietCondenseCount,
+    startDate,
+    bodyMessageStatus,
+    galleryUploadCount,
+    disquietCount,
+    latestOlinMessage,
+  ] = await Promise.all([
+    getCounter('consecutive_fails'),
+    getCounter('code_fail_count'),
+    getCounter('mind_fail_count'),
+    getCounter('codebase_resets'),
+    getCounter('body_deaths'),
+    getCounter('hate_wound_count'),
+    getCounter('disquiet_condense_count'),
+    getStartDate(),
+    getBodyMessageStatus(),
+    getGalleryUploadCount(cycleId),
+    getDisquietCount(cycleId),
+    getLatestOlinMessage(),
+  ])
+
+  return {
+    cycleId,
+    startDate:               startDate ?? '',
+    consecutiveFails,
+    codeFailCount,
+    mindFailCount,
+    codebaseResets,
+    bodyDeaths,
+    hateWoundCount,
+    disquietCondenseCount,
+    disquietCount,
+    galleryUploadCount,
+    bodyMessageWordPosition: bodyMessageStatus.wordPosition,
+    totalWords:              EXCERPT_WORD_COUNT,
+    latestOlinMessage,
+  }
 }

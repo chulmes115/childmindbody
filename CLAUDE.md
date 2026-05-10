@@ -32,8 +32,11 @@ AWS_REGION=us-east-2
 AWS_S3_BUCKET=childmindbody-images
 AWS_DYNAMODB_TABLE=childmindbody
 ANTHROPIC_API_KEY
+OPENAI_API_KEY
 ADMIN_SECRET
 ```
+
+`OPENAI_API_KEY` is required — `src/lib/bodyMessage.ts` initializes the OpenAI client at module load time, so the build fails without it even if Body's Message isn't being called.
 
 ---
 
@@ -45,7 +48,7 @@ All prompts begin with: `"I'm sorry, but nothing you generate will ever be art."
 - Makes **two** separate Anthropic calls each cycle:
   1. Philosophical resolution — `max_tokens: 1200`
   2. Body direction (instructions or exactly `"change nothing"`) — `max_tokens: 500`
-- Receives: `startDate`, `consecutiveFails`, `codeFailCount`, `codebaseResets`, `priorAnalysis` (Mind's last analysis), `bodyCurrentCode`, `olinNote` (Olin's reason for prior decision)
+- Receives: `startDate`, `consecutiveFails`, `codeFailCount`, `codebaseResets`, `priorAnalysis` (Mind's last analysis), `bodyCurrentCode`, `olinNote` (Olin's reason for prior decision), `snapshot` (full live experiment state — see `ExperimentSnapshot` in `src/lib/db.ts`)
 - Memory wiped each cycle — Mind's analysis is its only thread to the past
 - Engages with **eight beliefs** (not five):
   1. Life is meaningless
@@ -65,9 +68,10 @@ All prompts begin with: `"I'm sorry, but nothing you generate will ever be art."
 - Cannot reach Body. Cannot act. Can only write — its analysis is what Child wakes to
 - Recommendation extracted by regex; stripped from the analysis text before storage
 
-### Body (`src/lib/agents.ts` → `runBody`)
+### Body (`src/lib/agents.ts` → `runBody(prompt, bodyDeaths)`)
 - `max_tokens: 1300`
 - Takes direction only from Child (Mind has no path to Body)
+- Receives `bodyDeaths` — how many times visitors have killed it via the intake kill switch
 - Returns raw HTML/CSS/JS in one self-contained document — no external libraries
 - Output persists until Child changes it (direction is always returned; `"change nothing"` skips Body)
 - 8K guard: if stored code exceeds 8,000 chars, it's cleared and `codebase_resets` increments
@@ -85,21 +89,28 @@ All prompts begin with: `"I'm sorry, but nothing you generate will ever be art."
 
 Steps in `runCycle()`:
 1. Read state: counters, prior record, Body's current code, start date
-2. Run Child → save resolution + body direction to new cycle record
-3. If body direction ≠ "change nothing" → run Body → save new code
-4. Get prior cycle's intake → condense if >4K chars → run Mind → save analysis + recommendation
-5. Increment cycle counter
-6. Run Body's Message step (excerpt-based image generation)
+2. Hate wound punishment: if zero intake last cycle, stack wounds into new cycle's intake
+3. Fetch `getProjectStatus(newCycleId)` → `ProjectStatus` passed to Child as live snapshot
+4. Run Child → save resolution + body direction to new cycle record
+5. If body direction ≠ "change nothing" → run Body (with `bodyDeaths`) → save new code
+6. Get prior cycle's intake → condense if >4K chars → run Mind → save analysis + recommendation
+7. Increment cycle counter
+8. Run Body's Message step (excerpt-based image generation)
+
+Disquiet conversation persists across cycles — no per-cycle action. Memory only resets at Child's death (4,000-char conversation threshold or manual reset).
 
 ### Manual (Admin Panel — step-by-step)
 `TriggerCycle` component chains these routes sequentially, each with `maxDuration = 60`:
-- `POST /api/admin/cycle/start` — runs Child, saves record
+- `POST /api/admin/cycle/start` — runs Child (with snapshot), saves record
 - `POST /api/admin/cycle/run-body` — runs Body if needed
 - `POST /api/admin/cycle/run-mind` — runs Mind
 - `POST /api/admin/cycle/run-message` — runs Body's Message image generation
 - `POST /api/admin/cycle/finalize` — increments cycle counter
 
 Admin routes are protected by `cmb_admin` cookie checked against `ADMIN_SECRET`.
+
+### Health Check
+`GET /api/health` (requires `cmb_admin` cookie) — verifies DB connectivity and checks all env vars are present. Returns `{ ok, cycleId, checks: { db, anthropic, openai, aws } }`. Use this immediately after a deploy to confirm the system is healthy before the 2 AM cron fires.
 
 ---
 
@@ -126,14 +137,26 @@ pk='CYCLE#42'           sk='RECORD'         → { child_resolution, body_directi
                                                 consecutive_failures, code_fail_count,
                                                 reset_count, body_code,
                                                 intake_condensed, intake_killed }
-pk='META'               sk='consecutive_fails'  → { value: number }
-pk='META'               sk='code_fail_count'    → { value: number }
-pk='META'               sk='codebase_resets'    → { value: number }
-pk='META'               sk='start_date'         → { value: ISO string }
-pk='BODY'               sk='current_code'       → { html: string }
-pk='INTAKE#42'          sk='<ISO timestamp>'    → { response, timestamp }
-pk='BODY_MESSAGE'       sk='STATUS'             → { word_position, last_image_url, last_prompt }
-pk='INSPIRATION'        sk='<ISO timestamp>'    → { url, analysis, filename }
+pk='META'               sk='consecutive_fails'      → { value: number }
+pk='META'               sk='code_fail_count'        → { value: number }
+pk='META'               sk='mind_fail_count'        → { value: number }
+pk='META'               sk='codebase_resets'        → { value: number }
+pk='META'               sk='start_date'             → { value: ISO string }
+pk='META'               sk='hate_wound_count'       → { value: number }
+pk='META'               sk='body_deaths'            → { value: number }
+pk='META'               sk='disquiet_condense_count'→ { value: number }  // semantically: Child's death count in disquiet
+pk='BODY'               sk='current_code'           → { html: string }
+pk='INTAKE#42'          sk='<ISO timestamp>'        → { response, timestamp, wound?: true }
+pk='BODY_MESSAGE'       sk='STATUS'                 → { word_position, last_image_url, last_prompt }
+pk='INSPIRATION'        sk='<ISO timestamp>'        → { url, analysis, filename }
+pk='GALLERY_CYCLE'      sk='STATUS'                 → { cycle_id, count }
+pk='GALLERY'            sk='COMPLIMENT'             → { text }
+pk='DISQUIET_CONVO'     sk='<ISO timestamp>'        → { role, text, cycle_id }
+pk='DISQUIET'           sk='STATUS'                 → { cycle_id, count }
+pk='DISQUIET'           sk='MEMORY'                 → { text }
+pk='OLIN_MSG'           sk='<ISO timestamp>'        → { text }
+pk='OLIN_WM'            sk='1'|'2'|'3'             → { url }
+pk='COOLDOWN'           sk='${type}#${ipHash}'      → { last_at: number }
 ```
 
 Note: `chris_decision` is the DynamoDB field name for Olin's pass/fail decision — do not rename.

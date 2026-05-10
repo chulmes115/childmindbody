@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { getCycleRecord, getIntakeResponses, saveCycleRecord, getMeta, setMeta } from '@/lib/db'
+import { getCycleRecord, getIntakeResponses, saveCycleRecord, bumpCounter } from '@/lib/db'
 import { runMind, condenseIntake } from '@/lib/agents'
 
 export const maxDuration = 60
@@ -42,8 +42,7 @@ export async function POST(request: Request) {
 
     // Mind's failures: increments when recommendation is not 'fail' (pass or null)
     if (recommendation !== 'fail') {
-      const current = ((await getMeta('mind_fail_count')) as number) ?? 0
-      await setMeta('mind_fail_count', current + 1)
+      await bumpCounter('mind_fail_count')
     }
 
     return Response.json({ recommendation })

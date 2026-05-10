@@ -18,6 +18,8 @@ export async function POST(request: Request) {
 
   try {
     const { newCycleId } = await request.json() as { newCycleId: number }
+    // Disquiet conversation persists across cycles. It only resets on Child's
+    // death (conversation > 4,000 chars or manual reset). Nothing per-cycle here.
     await incrementCycleId()
     return Response.json({ done: true, cycle: newCycleId })
   } catch (err) {

@@ -5,26 +5,32 @@ import {
   incrementDisquietCount,
   saveDisquietMessage,
   getDisquietMemory,
+  getCounter,
+  getProjectStatus,
 } from '@/lib/db'
-
-// Messages persist across cycles — only the per-cycle count resets
-import { runDisquiet } from '@/lib/agents'
+import {
+  runDisquiet,
+  triggerDisquietDeath,
+  DISQUIET_CONVO_DEATH_THRESHOLD,
+} from '@/lib/agents'
 
 export const maxDuration = 60
 
 const MAX_QUESTIONS = 10
-const MAX_CHARS     = 50
+const MAX_CHARS     = 100
 
 export async function GET() {
   const cycleId = await getCurrentCycleId()
-  const [messages, count] = await Promise.all([
+  const [messages, count, deathCount] = await Promise.all([
     getDisquietMessages(),
     getDisquietCount(cycleId),
+    getCounter('disquiet_condense_count'),
   ])
   return Response.json({
     messages,
     questionsLeft: Math.max(0, MAX_QUESTIONS - count),
     cycleId,
+    deathCount,
   })
 }
 
@@ -60,19 +66,37 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Child has fallen silent. This cycle is over.' }, { status: 429 })
     }
 
-    const [history, memory] = await Promise.all([
+    const [history, memory, deathCount, status] = await Promise.all([
       getDisquietMessages(),
       getDisquietMemory(),
+      getCounter('disquiet_condense_count'),
+      getProjectStatus(cycleId),
     ])
 
     await saveDisquietMessage(cycleId, 'user', question)
     await incrementDisquietCount(cycleId)
 
-    const answer = await runDisquiet(question, history, memory)
+    const answer = await runDisquiet(question, history, memory, deathCount, status)
 
     await saveDisquietMessage(cycleId, 'child', answer)
 
-    return Response.json({ answer })
+    // Death check — sum of all message text (no role labels). If the running
+    // conversation has filled past the threshold, Child dies and writes his
+    // own memory forward before returning.
+    const totalChars =
+      history.reduce((sum, m) => sum + m.text.length, 0) +
+      question.length +
+      answer.length
+
+    let died          = false
+    let newDeathCount = deathCount
+    if (totalChars > DISQUIET_CONVO_DEATH_THRESHOLD) {
+      const result = await triggerDisquietDeath()
+      died          = result.died
+      newDeathCount = result.deathCount
+    }
+
+    return Response.json({ answer, died, deathCount: newDeathCount })
   } catch (err) {
     console.error('[disquiet]', err)
     return Response.json({ error: 'Internal error' }, { status: 500 })

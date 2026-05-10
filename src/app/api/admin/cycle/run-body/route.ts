@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { getMeta, setMeta, getCurrentBodyCode, saveBodyCode, saveCycleRecord } from '@/lib/db'
+import { getCounter, bumpCounter, getCurrentBodyCode, saveBodyCode, saveCycleRecord } from '@/lib/db'
 import { runBody } from '@/lib/agents'
 
 export const maxDuration = 60
@@ -26,20 +26,18 @@ export async function POST(request: Request) {
     const shouldUpdate = bodyDirection.toLowerCase().trim() !== 'change nothing'
 
     if (shouldUpdate) {
-      const [bodyCode, codebaseResets] = await Promise.all([
-        getCurrentBodyCode(),
-        getMeta('codebase_resets'),
-      ])
+      const bodyCode = await getCurrentBodyCode()
 
       // 8K guard
       if (bodyCode && bodyCode.length > 8000) {
         await Promise.all([
           saveBodyCode(''),
-          setMeta('codebase_resets', ((codebaseResets as number) ?? 0) + 1),
+          bumpCounter('codebase_resets'),
         ])
       }
 
-      const newBodyCode = await runBody(bodyDirection)
+      const bodyDeaths = await getCounter('body_deaths')
+      const newBodyCode = await runBody(bodyDirection, bodyDeaths)
       await Promise.all([
         saveBodyCode(newBodyCode),
         saveCycleRecord({ id: newCycleId, body_code: newBodyCode }),

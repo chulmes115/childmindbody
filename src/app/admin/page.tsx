@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { getMeta, getCurrentCycleId, getCycleRecord, getInspirationImages, getDisquietMemory, getDisquietCount, getOlinMessages, getOlinWatermarks } from '@/lib/db'
+import { getCurrentCycleId, getProjectStatus, getCycleRecord, getInspirationImages, getDisquietMemory, getOlinMessages, getOlinWatermarks } from '@/lib/db'
 import { login, logout, seedBodyCode } from './actions'
 import DecisionButtons from './DecisionButtons'
 import TriggerCycle from './TriggerCycle'
@@ -38,14 +38,11 @@ export default async function AdminPage() {
   }
 
   // ── Fetch current state ─────────────────────────────────────────────────────
-  const [cycleId, consecutiveFails, codeFailCount, mindFailCount, inspirationImages, disquietMemory, disquietCount, olinMessages, olinWatermarks] = await Promise.all([
-    getCurrentCycleId(),
-    getMeta('consecutive_fails'),
-    getMeta('code_fail_count'),
-    getMeta('mind_fail_count'),
+  const cycleId = await getCurrentCycleId()
+  const [status, inspirationImages, disquietMemory, olinMessages, olinWatermarks] = await Promise.all([
+    getProjectStatus(cycleId),
     getInspirationImages(),
     getDisquietMemory(),
-    getCurrentCycleId().then((id) => getDisquietCount(id)),
     getOlinMessages(),
     getOlinWatermarks(),
   ])
@@ -59,9 +56,7 @@ export default async function AdminPage() {
   ).filter((id) => id > 0)
   const history = await Promise.all(historyIds.map((id) => getCycleRecord(id)))
 
-  const childFails = (consecutiveFails as number) ?? 0
-  const bodyFails  = (codeFailCount   as number) ?? 0
-  const mindFails  = (mindFailCount   as number) ?? 0
+  const { consecutiveFails: childFails, codeFailCount: bodyFails, mindFailCount: mindFails, bodyDeaths: bodyDead, disquietCount } = status
 
   return (
     <main className="min-h-screen text-white/80" style={{ fontFamily: 'var(--font-geist-mono)' }}>
@@ -78,6 +73,9 @@ export default async function AdminPage() {
         </span>
         <span className="text-white/20 text-xs">
           Mind: <span className="text-white/50">{mindFails}</span>
+        </span>
+        <span className="text-white/20 text-xs">
+          Body deaths: <span className="text-[#8b0016]/70">{bodyDead}</span>
         </span>
         <form action={logout} className="ml-auto">
           <button type="submit" className="text-xs text-white/20 hover:text-white/40 transition-colors">
@@ -198,7 +196,7 @@ export default async function AdminPage() {
             </div>
           </div>
           <p className="text-white/20 text-xs mb-4">
-            Accumulated memory from past cycles. Click &ldquo;condense memory&rdquo; to summarize and append the current cycle&apos;s conversation before triggering a new cycle.
+            Child&apos;s persistent memory. He curates this himself at every death — up to 2,000 characters chosen from his prior memory plus the dying conversation. He dies automatically when the conversation exceeds 4,000 characters, or you can kill him manually with the button.
           </p>
           {disquietMemory ? (
             <pre className="text-white/40 text-xs leading-relaxed whitespace-pre-wrap border border-white/10 p-5 rounded">
